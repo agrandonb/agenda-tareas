@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Registro de Tareas Diario</title>
+  <link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+  <h1>Registro de Tareas Diario</h1>
+  <div class="dia-semana" id="diaSemana"></div>
+  <div class="contenedor" id="contenedorTareas"></div>
+
+  <div class="caja-notas">
+    <h2>Notas del Día</h2>
+    <textarea id="notasDia" placeholder="Escribe tus notas aquí..."></textarea>
+  </div>
+
+  <div class="botones-opciones">
+    <button onclick="exportarCSV()">Exportar CSV</button>
+    <button onclick="limpiarAntiguos()">Limpiar Registros Antiguos</button>
+  </div>
+
+  <h2 class="titulo-historial">Historial</h2>
+  <div class="historial-container" id="historial"></div>
+
+  <!-- Canvas para el gráfico -->
+  <canvas id="graficoSemanal" width="400" height="200"></canvas>
+
+  <!-- Chart.js primero -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Luego tu script -->
+  <script src="script.js"></script>
+</body>
+</html>
