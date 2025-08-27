@@ -23,6 +23,13 @@
 
   <h2 class="titulo-historial">Historial</h2>
   <div class="historial-container" id="historial"></div>
+<div id="filtrosHistorial">
+  <button onclick="actualizarHistorial('7d')">Últimos 7 días</button>
+  <button onclick="actualizarHistorial('mes')">Mes actual</button>
+  <button onclick="actualizarHistorial('todo')">Todo</button>
+</div>
+
+<div id="historial"></div>
 
   <!-- Canvas para el gráfico -->
   <canvas id="graficoSemanal" width="400" height="200"></canvas>
