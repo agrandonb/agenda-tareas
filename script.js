@@ -123,15 +123,25 @@ function obtenerEstadoDia(fechaStr, tareasCompletadas) {
   }
 }
 
-// Modificar historial para mostrar estado y colapsar detalle
-function actualizarHistorial() {
+function actualizarHistorial(filtro = "7d") {
   const historial = document.getElementById("historial");
   historial.innerHTML = "";
   const dias = Object.keys(datosGuardados).sort().reverse();
 
-  dias.forEach(fecha => {
+  let fechasFiltradas = dias;
+
+  if (filtro === "7d") fechasFiltradas = dias.slice(0, 7);
+  else if (filtro === "mes") {
+    const mesActual = hoy.getMonth();
+    fechasFiltradas = dias.filter(d => new Date(d).getMonth() === mesActual);
+  } // 'todo' deja todas las fechas
+
+  fechasFiltradas.forEach(fecha => {
     const tareasDelDia = datosGuardados[fecha];
     const estado = obtenerEstadoDia(fecha, tareasDelDia);
+
+    const dia = new Date(fecha).getDay();
+    if (dia === 0 || dia === 6) return; // No mostrar sábados y domingos
 
     const div = document.createElement("div");
     div.className = "historial-dia";
@@ -141,7 +151,7 @@ function actualizarHistorial() {
     encabezado.style.cursor = "pointer";
 
     const lista = document.createElement("ul");
-    lista.style.display = estado.startsWith("✅") ? "block" : "none"; // auto mostrar si está OK
+    lista.style.display = estado.startsWith("✅") ? "block" : "none";
     lista.innerHTML = tareasDelDia.map(i => `<li>${i.tarea} - ${i.hora}</li>`).join("");
 
     encabezado.onclick = () => {
@@ -153,8 +163,9 @@ function actualizarHistorial() {
     historial.appendChild(div);
   });
 
-  actualizarGrafico();
+  actualizarGrafico(fechasFiltradas);
 }
+
 
 const dia = tareasPorDia[diaNombre] || { prioridad1: [], prioridad2: [], prioridad3: [], comunes1: [], comunes2: [] };
 
