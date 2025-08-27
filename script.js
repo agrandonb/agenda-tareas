@@ -83,15 +83,13 @@ function guardar() {
   localStorage.setItem("notasDia-" + hoyStr, document.getElementById("notasDia").value);
 }
 
-// Esta función devuelve las tareas totales esperadas para una fecha dada, según el día de la semana
+// Devuelve las tareas esperadas para la fecha según su día de semana
 function obtenerTareasDia(fechaStr) {
   const fecha = new Date(fechaStr);
   const diasSemana = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
   const nombreDia = diasSemana[fecha.getDay()];
   const diaObj = tareasPorDia[nombreDia];
-  if (!diaObj) {
-    return [];
-  }
+  if (!diaObj) return [];
   return [].concat(
     diaObj.comunes1,
     diaObj.comunes2,
@@ -101,9 +99,11 @@ function obtenerTareasDia(fechaStr) {
   );
 }
 
-// Ahora recibe la fecha para calcular el estado del día correcto
+// Revisa estado de un día considerando solo sus propias tareas
 function obtenerEstadoDia(fechaStr, tareasCompletadas) {
   const totalTareas = obtenerTareasDia(fechaStr);
+
+  if (totalTareas.length === 0) return "Sin tareas";
 
   const completadas = totalTareas.every(t =>
     tareasCompletadas.some(tc => tc.tarea === t)
@@ -119,7 +119,7 @@ function obtenerEstadoDia(fechaStr, tareasCompletadas) {
   }
 }
 
-// Modificar historial para mostrar estado y colapsar detalle
+// Historial con estado por día
 function actualizarHistorial() {
   const historial = document.getElementById("historial");
   historial.innerHTML = "";
@@ -137,7 +137,7 @@ function actualizarHistorial() {
     encabezado.style.cursor = "pointer";
 
     const lista = document.createElement("ul");
-    lista.style.display = estado.startsWith("✅") ? "block" : "none"; // auto mostrar si está OK
+    lista.style.display = estado.startsWith("✅") ? "block" : "none";
     lista.innerHTML = tareasDelDia.map(i => `<li>${i.tarea} - ${i.hora}</li>`).join("");
 
     encabezado.onclick = () => {
@@ -152,32 +152,30 @@ function actualizarHistorial() {
   actualizarGrafico();
 }
 
+// Renderizar columnas de hoy
 const dia = tareasPorDia[diaNombre] || { prioridad1: [], prioridad2: [], prioridad3: [], comunes1: [], comunes2: [] };
-
 crearColumna("Búsqueda base", dia.comunes1);
 crearColumna("Ingresos y revisión", dia.comunes2);
 crearColumna("Gestiones primera prioridad", dia.prioridad1, "rojo-pastel");
 crearColumna("Gestiones segunda prioridad", dia.prioridad2, "naranjo-pastel");
 crearColumna("Gestiones tercera prioridad", [...dia.prioridad3, "Emails, reuniones y otros"], "amarillo-pastel");
 
-// Notas fijas, se guardan independientemente del día
+// Notas fijas, persisten siempre
 const notas = document.getElementById("notasDia");
-
-// Cargar nota persistente al iniciar
 notas.value = localStorage.getItem("notasFijas") || "";
-
-// Guardar automáticamente al escribir
 notas.addEventListener("input", () => {
   localStorage.setItem("notasFijas", notas.value);
 });
 
 actualizarHistorial();
 
+// Gráfico semanal
 function actualizarGrafico() {
   const fechas = Object.keys(datosGuardados).sort().slice(-7);
   const data = fechas.map(fecha => {
     const tareas = datosGuardados[fecha];
     const totalTareas = obtenerTareasDia(fecha);
+    if (totalTareas.length === 0) return 0;
     const completadas = totalTareas.filter(t =>
       tareas.some(tc => tc.tarea === t)
     ).length;
