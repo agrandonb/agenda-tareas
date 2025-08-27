@@ -74,7 +74,7 @@ function marcarTarea(boton, tarea) {
     const hora = new Date().toLocaleTimeString();
     datosGuardados[hoyStr].push({ tarea, hora });
     guardar();
-    actualizarHistorial();
+    actualizarHistorial(); // ahora se actualiza automáticamente
   }
 }
 
@@ -138,7 +138,13 @@ function actualizarHistorial(filtro = "7d") {
 
   fechasFiltradas.forEach(fecha => {
     const tareasDelDia = datosGuardados[fecha];
-    const estado = obtenerEstadoDia(fecha, tareasDelDia);
+    const totalTareas = obtenerTareasDia(fecha);
+
+    const completadasCount = totalTareas.filter(t =>
+      tareasDelDia.some(tc => tc.tarea === t)
+    ).length;
+
+    const faltantes = totalTareas.filter(t => !tareasDelDia.some(tc => tc.tarea === t));
 
     const dia = new Date(fecha).getDay();
     if (dia === 0 || dia === 6) return; // No mostrar sábados y domingos
@@ -147,12 +153,19 @@ function actualizarHistorial(filtro = "7d") {
     div.className = "historial-dia";
 
     const encabezado = document.createElement("h3");
-    encabezado.textContent = `${fecha} - ${estado}`;
+
+    // Texto compacto con emoji según porcentaje de cumplimiento
+    let simbolo;
+    if (completadasCount === totalTareas.length) simbolo = "✅";
+    else if (completadasCount === 0) simbolo = "❌";
+    else simbolo = "⚠️";
+
+    encabezado.textContent = `${simbolo} ${completadasCount}/${totalTareas.length} - ${fecha}`;
     encabezado.style.cursor = "pointer";
 
     const lista = document.createElement("ul");
-    lista.style.display = estado.startsWith("✅") ? "block" : "none";
-    lista.innerHTML = tareasDelDia.map(i => `<li>${i.tarea} - ${i.hora}</li>`).join("");
+    lista.style.display = "none"; // inicialmente oculta
+    lista.innerHTML = faltantes.map(t => `<li>${t}</li>`).join("");
 
     encabezado.onclick = () => {
       lista.style.display = lista.style.display === "none" ? "block" : "none";
@@ -165,7 +178,6 @@ function actualizarHistorial(filtro = "7d") {
 
   actualizarGrafico(fechasFiltradas);
 }
-
 
 const dia = tareasPorDia[diaNombre] || { prioridad1: [], prioridad2: [], prioridad3: [], comunes1: [], comunes2: [] };
 
