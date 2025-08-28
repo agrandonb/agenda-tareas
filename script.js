@@ -181,8 +181,8 @@ function actualizarHistorial(filtro = "7d") {
 
 const dia = tareasPorDia[diaNombre] || { prioridad1: [], prioridad2: [], prioridad3: [], comunes1: [], comunes2: [] };
 
-crearColumna("Búsqueda base", dia.comunes1);
-crearColumna("Ingresos y revisión", dia.comunes2);
+crearColumna("Búsqueda bases", dia.comunes1);
+crearColumna("Actualizar registros", dia.comunes2);
 crearColumna("Gestiones primera prioridad", dia.prioridad1, "rojo-pastel");
 crearColumna("Gestiones segunda prioridad", dia.prioridad2, "naranjo-pastel");
 crearColumna("Gestiones tercera prioridad", [...dia.prioridad3, "Emails, reuniones y otros"], "amarillo-pastel");
@@ -234,3 +234,4 @@ function actualizarGrafico() {
     }
   });
 }
+
