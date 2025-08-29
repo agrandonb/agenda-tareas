@@ -30,13 +30,13 @@ const tareasPorDia = {
   "Jueves": {
     prioridad1: ["Comité", "Reunión PSQ", "DP", "Envío sugerencias CK"],
     prioridad2: ["Gestión ingreso médico y ps", "Coordinar con PI y EPT", "Revisión malla día siguiente"],
-    prioridad3: ["Revisión >90 días", "Revisión reingreso SUSESO", "Gestiones agencia"],
+    prioridad3: ["Revisión >90 días", "Revisión reingreso SUSESO", "Revisión activos", "Gestiones agencia"],
     comunes1: ["DATA", "Databricks", "PA activos"],
     comunes2: ["Ingreso funcionarios", "Reingreso SUSESO", "Excel gestión SM", "Malla PSQ"]
   },
   "Viernes": {
     prioridad1: ["Comité", "Reunión PSQ", "Envío sugerencias CK"],
-    prioridad2: ["Gestión ingreso médico y ps", "Revisión malla día siguiente", "Revisión activos"],
+    prioridad2: ["Gestión ingreso médico y ps", "Revisión malla día siguiente"],
     prioridad3: ["Coordinar con PI y EPT", "Gestiones agencia"],
     comunes1: ["DATA", "Databricks", "PA activos"],
     comunes2: ["Ingreso funcionarios", "Reingreso SUSESO", "Excel gestión SM", "Malla PSQ"]
@@ -234,4 +234,5 @@ function actualizarGrafico() {
     }
   });
 }
+
 
