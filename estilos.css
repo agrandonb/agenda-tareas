@@ -1,4 +1,4 @@
-/* Fuente moderna y variables de color */
+/* Fuente moderna y variables de color */ 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
 
 :root {
@@ -10,6 +10,8 @@
   --rojo-pastel: #fdecea;
   --naranjo-pastel: #fff4e5;
   --amarillo-pastel: #fffde7;
+  --gris-claro: #f0f0f0;
+  --gris-hover: #e0e0e0;
 }
 
 body {
@@ -79,15 +81,26 @@ h1 {
   color: var(--color-verde-texto);
 }
 
-/* Colores pastel mejorados */
-.rojo-pastel {
-  background-color: var(--rojo-pastel);
+/* Colores pastel */
+.rojo-pastel { background-color: var(--rojo-pastel); }
+.naranjo-pastel { background-color: var(--naranjo-pastel); }
+.amarillo-pastel { background-color: var(--amarillo-pastel); }
+
+/* Botón agregar tarea solo en modo edición */
+.add-task-btn {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background-color: var(--color-primario);
+  color: white;
+  border: none;
+  cursor: pointer;
+  display: none;
+  transition: background 0.3s, transform 0.2s;
 }
-.naranjo-pastel {
-  background-color: var(--naranjo-pastel);
-}
-.amarillo-pastel {
-  background-color: var(--amarillo-pastel);
+.add-task-btn:hover {
+  background-color: #125a9c;
+  transform: scale(1.05);
 }
 
 /* Botones de opciones */
@@ -119,37 +132,38 @@ h1 {
   padding: 12px;
   border-radius: 8px;
   box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   transition: transform 0.2s;
 }
-.historial-dia:hover {
-  transform: translateX(2px);
-}
+.historial-dia:hover { transform: translateX(2px); }
 
 /* Historial encabezado clickeable */
 .historial-dia h3 {
   margin: 0;
   padding: 10px;
-  background-color: #f0f0f0;
+  background-color: var(--gris-claro);
   cursor: pointer;
   border-radius: 6px;
   transition: background-color 0.2s;
 }
 .historial-dia h3:hover {
-  background-color: #e0e0e0;
+  background-color: var(--gris-hover);
 }
 
-/* Lista de detalles de tareas */
-.historial-dia ul {
-  margin: 10px 0 0;
-  padding-left: 20px;
-  list-style-type: disc;
-  max-height: 0;
-  overflow: hidden;
-  transition: max-height 0.3s ease;
+/* Historial detalles de tareas */
+.historial-dia div {
+  margin-top: 5px;
+  padding-left: 15px;
+  display: none;
 }
-.historial-dia ul.mostrar {
-  max-height: 500px;
+.historial-dia div p {
+  margin: 3px 0;
+}
+
+/* Diferenciación días fuera de oficina */
+.historial-dia h3:contains("⚪") {
+  color: gray;
+  font-style: italic;
 }
 
 /* Caja de notas */
@@ -171,40 +185,26 @@ h1 {
   font-family: inherit;
 }
 
-/* Estilo gráfico semanal */
-#graficoSemanal {
+/* Contenedor de gráficos lado a lado */
+.graficos-container {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
   margin-top: 30px;
-  max-width: 100%;
+}
+.graficos-container canvas {
+  flex: 1;
+  min-width: 300px;
   background-color: #ffffff;
-  padding: 20px;
+  padding: 15px;
   border-radius: 10px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-}
-
-/* Espaciado entre días de historial */
-.historial-dia + .historial-dia {
-  margin-top: 20px;
-}
-
-/* Título historial */
-.titulo-historial {
-  font-size: 1.4rem;
-  font-weight: 600;
-  margin-top: 40px;
-  margin-bottom: 15px;
-  text-align: left;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
 }
 
 /* Responsive */
-@media (max-width: 600px) {
-  .contenedor {
-    grid-template-columns: 1fr;
-    gap: 15px;
-  }
-  .caja {
-    padding: 15px;
-  }
+@media (max-width: 800px) {
+  .contenedor { grid-template-columns: 1fr; gap: 15px; }
+  .graficos-container { flex-direction: column; }
   .historial-dia { font-size: 0.85rem; }
   .task-button { padding: 12px; font-size: 0.9rem; }
 }
-
