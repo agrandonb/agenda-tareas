@@ -1,4 +1,4 @@
-// ============= Fecha y encabezado ==================
+// ================== Fecha y encabezado ==================
 const diasSemana = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 const hoy = new Date();
 const hoyStr = hoy.toISOString().split("T")[0];
@@ -48,26 +48,28 @@ const tareasPorDia = {
 
 // ================== Storage ==================
 const datosGuardados = JSON.parse(localStorage.getItem("registroTareas")) || {};
+if (!datosGuardados[hoyStr]) datosGuardados[hoyStr] = [];
+
 const edicionesGuardadas = JSON.parse(localStorage.getItem("ediciones")) || {};
 if (!edicionesGuardadas[hoyStr]) edicionesGuardadas[hoyStr] = { titulos: {}, tareas: {} };
-if (!datosGuardados[hoyStr]) datosGuardados[hoyStr] = [];
+
+let registroHoras = JSON.parse(localStorage.getItem("registroHoras")) || [];
 
 // ================== UI base ==================
 const contenedor = document.getElementById("contenedorTareas");
-let modoEdicion = false;
 
+let modoEdicion = false;
 const botonEditar = document.createElement("button");
 botonEditar.textContent = "✏️ Editar";
 botonEditar.style.margin = "10px";
 botonEditar.onclick = () => {
   modoEdicion = !modoEdicion;
   botonEditar.textContent = modoEdicion ? "✅ Terminar edición" : "✏️ Editar";
-  contenedor.innerHTML = "";
-  renderColumnas();
+  document.querySelectorAll(".add-task-btn").forEach(b => b.style.display = modoEdicion ? "inline-block" : "none");
 };
 if (contenedor) document.body.insertBefore(botonEditar, contenedor);
 
-// ================== Helpers ==================
+// ================== Helpers de estructura ==================
 const columnasDef = [
   { id: "c1", titulo: "Búsqueda bases", campo: "comunes1", clase: "" },
   { id: "c2", titulo: "Actualizar registros", campo: "comunes2", clase: "" },
@@ -92,11 +94,10 @@ function buildTareasEsperadas(fechaStr) {
 
     listaBase.forEach((original, index) => {
       const key = `${col.id}-${index}`;
-      const name = edits.tareas[key] || original;
+      const name = edits.tareas && edits.tareas[key] ? edits.tareas[key] : original;
       out.push({ key, name });
     });
   });
-
   return out;
 }
 
@@ -106,9 +107,9 @@ function crearColumna(colDef, tareasBase) {
   const div = document.createElement("div");
   div.className = "caja";
 
-  // Título editable
   const h2 = document.createElement("h2");
-  h2.textContent = edicionesGuardadas[hoyStr].titulos[id] || titulo;
+  const tituloEditado = edicionesGuardadas[hoyStr].titulos[id] || titulo;
+  h2.textContent = tituloEditado;
   h2.ondblclick = () => {
     if (!modoEdicion) return;
     const nuevo = prompt("Editar título:", h2.textContent);
@@ -120,14 +121,17 @@ function crearColumna(colDef, tareasBase) {
   };
   div.appendChild(h2);
 
-  // Render tareas
-  tareasBase.forEach((tareaOriginal, index) => {
+  const lista = tareasBase.slice();
+  if (colDef.extra && Array.isArray(colDef.extra)) lista.push(...colDef.extra);
+
+  lista.forEach((tareaOriginal, index) => {
     const key = `${id}-${index}`;
     const nombreTarea = edicionesGuardadas[hoyStr].tareas[key] || tareaOriginal;
 
     const boton = document.createElement("button");
     boton.textContent = nombreTarea;
     boton.className = `task-button ${clase}`;
+
     if (datosGuardados[hoyStr].some(it => (it.key && it.key === key) || it.tarea === nombreTarea)) {
       boton.classList.add("completed");
     }
@@ -144,29 +148,24 @@ function crearColumna(colDef, tareasBase) {
         }
       }
     };
-
     div.appendChild(boton);
   });
 
-  // Botón para agregar tareas nuevas
-  const btnAgregar = document.createElement("button");
-  btnAgregar.textContent = "+ Agregar tarea";
-  btnAgregar.style.marginTop = "5px";
-  btnAgregar.onclick = () => {
-    if (!modoEdicion) return alert("Activa el modo edición para agregar tareas.");
-    const nuevaTarea = prompt("Nombre de la nueva tarea:");
-    if (nuevaTarea) {
-      const key = `${id}-${Date.now()}`;
-      edicionesGuardadas[hoyStr].tareas[key] = nuevaTarea;
-      const boton = document.createElement("button");
-      boton.textContent = nuevaTarea;
-      boton.className = `task-button ${clase}`;
-      boton.onclick = () => marcarTarea(boton, nuevaTarea, key);
-      div.insertBefore(boton, btnAgregar);
+  // Botón agregar tarea
+  const addBtn = document.createElement("button");
+  addBtn.textContent = "➕ Agregar tarea";
+  addBtn.className = "add-task-btn";
+  addBtn.style.display = modoEdicion ? "inline-block" : "none";
+  addBtn.onclick = () => {
+    const nueva = prompt("Nombre de la nueva tarea:");
+    if (nueva) {
+      const key = `${id}-${lista.length}`;
+      edicionesGuardadas[hoyStr].tareas[key] = nueva;
       guardar();
+      location.reload();
     }
   };
-  div.appendChild(btnAgregar);
+  div.appendChild(addBtn);
 
   contenedor.appendChild(div);
 }
@@ -175,10 +174,18 @@ function crearColumna(colDef, tareasBase) {
 function marcarTarea(boton, nombreTarea, key) {
   if (!boton.classList.contains("completed")) {
     boton.classList.add("completed");
-    const hora = new Date().toLocaleTimeString();
-    datosGuardados[hoyStr].push({ tarea: nombreTarea, hora, key });
+    const ahora = new Date();
+    const horaStr = ahora.getHours().toString().padStart(2,'0') + ":" + ahora.getMinutes().toString().padStart(2,'0');
+
+    if (!datosGuardados[hoyStr]) datosGuardados[hoyStr] = [];
+    datosGuardados[hoyStr].push({ tarea: nombreTarea, hora: horaStr, key });
+
+    registroHoras.push({ tarea: nombreTarea, hora: ahora });
+    localStorage.setItem("registroHoras", JSON.stringify(registroHoras));
+
     guardar();
     actualizarHistorial();
+    actualizarGraficoHoras();
   }
 }
 
@@ -189,17 +196,6 @@ function guardar() {
   if (notas) localStorage.setItem("notasFijas", notas.value || "");
 }
 
-// ================== Render columnas completo ==================
-function renderColumnas() {
-  contenedor.innerHTML = "";
-  const baseHoy = tareasPorDia[diaNombre] || { prioridad1: [], prioridad2: [], prioridad3: [], comunes1: [], comunes2: [] };
-  columnasDef.forEach(col => {
-    const lista = [...(baseHoy[col.campo] || [])];
-    if (col.extra) lista.push(...col.extra);
-    crearColumna(col, lista);
-  });
-}
-
 // ================== Historial ==================
 function actualizarHistorial() {
   const historial = document.getElementById("historial");
@@ -207,76 +203,134 @@ function actualizarHistorial() {
   historial.innerHTML = "";
 
   const fechas = [];
-  const primerDia = new Date(Object.keys(datosGuardados).sort()[0] || hoyStr);
-  let current = new Date(primerDia.getFullYear(), primerDia.getMonth(), primerDia.getDate());
-  while (current <= hoy) {
-    const dayName = diasSemana[current.getDay()];
-    if (dayName !== "Sábado" && dayName !== "Domingo") {
-      const fechaStr = current.toISOString().split("T")[0];
-      fechas.push(fechaStr);
-      if (!datosGuardados[fechaStr]) datosGuardados[fechaStr] = [];
+  let startDate = new Date("2025-08-01"); 
+  while (startDate <= hoy) {
+    const dayName = diasSemana[startDate.getDay()];
+    if (["Lunes","Martes","Miércoles","Jueves","Viernes"].includes(dayName)) {
+      const str = startDate.toISOString().split("T")[0];
+      fechas.push(str);
+      if (!datosGuardados[str]) datosGuardados[str] = [];
     }
-    current.setDate(current.getDate() + 1);
+    startDate.setDate(startDate.getDate() + 1);
   }
 
-  fechas.reverse();
-
-  fechas.forEach(fecha => {
+  fechas.reverse().forEach(fecha => {
     const esperadas = buildTareasEsperadas(fecha);
-    const tareasDelDia = datosGuardados[fecha];
-    let completadasCount = esperadas.filter(e =>
+    const tareasDelDia = datosGuardados[fecha] || [];
+    const completadasCount = esperadas.filter(e =>
       tareasDelDia.some(tc => (tc.key && tc.key === e.key) || tc.tarea === e.name)
     ).length;
 
     const div = document.createElement("div");
     div.className = "historial-dia";
-    const encabezado = document.createElement("h3");
 
-    let simbolo = "⚠️";
-    if (completadasCount === esperadas.length && completadasCount > 0) simbolo = "✅";
-    else if (completadasCount === 0 && esperadas.length > 0) simbolo = "❌";
-    else if (esperadas.length === 0) simbolo = "🏝️"; // fuera de oficina
+    const encabezado = document.createElement("h3");
+    encabezado.style.cursor = "pointer";
+
+    let simbolo;
+    if (tareasDelDia.length === 0 && fecha !== hoyStr) simbolo = "⚪"; // fuera oficina
+    else if (completadasCount === esperadas.length) simbolo = "✅";
+    else if (completadasCount === 0) simbolo = "❌";
+    else simbolo = "⚠️";
 
     encabezado.textContent = `${simbolo} ${completadasCount}/${esperadas.length} - ${fecha}`;
-    encabezado.style.cursor = "pointer";
     div.appendChild(encabezado);
+
+    const contenido = document.createElement("div");
+    contenido.style.display = "none";
+    tareasDelDia.forEach(td => {
+      const p = document.createElement("p");
+      p.textContent = `${td.hora} - ${td.tarea}`;
+      contenido.appendChild(p);
+    });
+    div.appendChild(contenido);
+
+    encabezado.onclick = () => {
+      contenido.style.display = contenido.style.display === "none" ? "block" : "none";
+    };
+
     historial.appendChild(div);
   });
 
-  actualizarGrafico();
+  actualizarGraficos();
 }
 
-// ================== Gráfico semanal ==================
-function actualizarGrafico() {
-  const canvas = document.getElementById("graficoSemanal");
-  if (!canvas || !window.Chart) return;
+// ================== Gráficos ==================
+function actualizarGraficos() {
+  actualizarGraficoCumplimiento();
+  actualizarGraficoHoras();
+}
 
-  const fechas = Object.keys(datosGuardados).sort().slice(-7);
-  const data = fechas.map(fecha => {
-    const tareas = datosGuardados[fecha] || [];
-    const esperadas = buildTareasEsperadas(fecha);
-    const completadas = esperadas.filter(e =>
-      tareas.some(tc => (tc.key && tc.key === e.key) || tc.tarea === e.name)
-    ).length;
-    return esperadas.length ? (completadas / esperadas.length) * 100 : 0;
+function actualizarGraficoCumplimiento() {
+  const grafCumpl = document.getElementById("graficoSemanal");
+  if (!grafCumpl || !window.Chart) return;
+
+  const semanas = {};
+  Object.keys(datosGuardados).sort().forEach(fecha => {
+    const d = new Date(fecha);
+    const anioSemana = `${d.getFullYear()}-S${Math.ceil((d.getDate() + 6 - d.getDay()) / 7)}`;
+    if (!semanas[anioSemana]) semanas[anioSemana] = [];
+    semanas[anioSemana].push(fecha);
   });
 
-  const ctx = canvas.getContext("2d");
-  if (window.miGrafico) window.miGrafico.destroy();
-  window.miGrafico = new Chart(ctx, {
+  const labelsCumpl = Object.keys(semanas);
+  const dataCumpl = labelsCumpl.map(s => {
+    const fechasSemana = semanas[s];
+    let total = 0, completadas = 0;
+    fechasSemana.forEach(f => {
+      const esperadas = buildTareasEsperadas(f);
+      total += esperadas.length;
+      completadas += esperadas.filter(e =>
+        datosGuardados[f].some(tc => (tc.key && tc.key === e.key) || tc.tarea === e.name)
+      ).length;
+    });
+    return total ? (completadas / total) * 100 : 0;
+  });
+
+  if (window.chartCumpl) window.chartCumpl.destroy();
+  window.chartCumpl = new Chart(grafCumpl.getContext("2d"), {
+    type: "bar",
+    data: { labels: labelsCumpl, datasets: [{ label: "% de cumplimiento", data: dataCumpl, borderWidth: 1 }] },
+    options: { scales: { y: { min: 0, max: 100, ticks: { callback: v => v + "%" } } } }
+  });
+}
+
+function actualizarGraficoHoras() {
+  const grafHoras = document.getElementById("graficoHoras");
+  if (!grafHoras || !window.Chart) return;
+
+  const horasRango = Array.from({length: 10}, (_, i) => 8 + i); // 8-17
+  const tareasUnicas = [...new Set((datosGuardados[hoyStr] || []).map(r => r.tarea))];
+
+  const datasets = tareasUnicas.map((tarea, idx) => {
+    return {
+      label: tarea,
+      data: horasRango.map(h => {
+        return (datosGuardados[hoyStr] || []).filter(r => {
+          const hActual = parseInt(r.hora.split(":")[0]);
+          return r.tarea === tarea && hActual === h;
+        }).length;
+      }),
+      backgroundColor: `hsl(${idx * 60}, 70%, 60%)`
+    };
+  });
+
+  if (window.chartHoras) window.chartHoras.destroy();
+  window.chartHoras = new Chart(grafHoras.getContext("2d"), {
     type: 'bar',
-    data: {
-      labels: fechas,
-      datasets: [{ label: '% de cumplimiento', data: data, borderWidth: 1 }]
-    },
+    data: { labels: horasRango.map(h => h + ":00"), datasets: datasets },
     options: {
-      scales: { y: { min: 0, max: 100, ticks: { callback: v => v + "%" } } }
+      indexAxis: 'y',
+      responsive: true,
+      plugins: { title: { display: true, text: 'Hora tarea completada' }, legend: { position: 'bottom' } },
+      scales: { x: { title: { display: true, text: 'Cantidad de veces presionada' } }, y: { title: { display: true, text: 'Hora' } } }
     }
   });
 }
 
 // ================== Render inicial ==================
-renderColumnas();
+const baseHoy = tareasPorDia[diaNombre] || { prioridad1: [], prioridad2: [], prioridad3: [], comunes1: [], comunes2: [] };
+columnasDef.forEach(col => crearColumna(col, baseHoy[col.campo] || []));
 
 // Notas persistentes
 const notas = document.getElementById("notasDia");
