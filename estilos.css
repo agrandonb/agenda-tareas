@@ -137,7 +137,6 @@ h1 {
 }
 .historial-dia:hover { transform: translateX(2px); }
 
-/* Historial encabezado clickeable */
 .historial-dia h3 {
   margin: 0;
   padding: 10px;
@@ -146,11 +145,8 @@ h1 {
   border-radius: 6px;
   transition: background-color 0.2s;
 }
-.historial-dia h3:hover {
-  background-color: var(--gris-hover);
-}
+.historial-dia h3:hover { background-color: var(--gris-hover); }
 
-/* Historial detalles de tareas */
 .historial-dia div {
   margin-top: 5px;
   padding-left: 15px;
@@ -158,12 +154,6 @@ h1 {
 }
 .historial-dia div p {
   margin: 3px 0;
-}
-
-/* Diferenciación días fuera de oficina */
-.historial-dia h3:contains("⚪") {
-  color: gray;
-  font-style: italic;
 }
 
 /* Caja de notas */
@@ -191,18 +181,20 @@ h1 {
   gap: 20px;
   flex-wrap: wrap;
   margin-top: 30px;
+  justify-content: space-between;
 }
 .graficos-container canvas {
-  flex: 1;
-  min-width: 300px;
+  flex: 1 1 300px;   /* ancho base */
+  max-width: 48%;    /* para que estén uno al lado del otro */
+  height: 200px;     /* altura fija */
   background-color: #ffffff;
-  padding: 15px;
+  padding: 10px;
   border-radius: 10px;
   box-shadow: 0 2px 6px rgba(0,0,0,0.1);
 }
 
 /* Responsive */
-@media (max-width: 800px) {
+@media (max-width: 900px) {
   .contenedor { grid-template-columns: 1fr; gap: 15px; }
   .graficos-container { flex-direction: column; }
   .historial-dia { font-size: 0.85rem; }
