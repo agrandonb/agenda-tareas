@@ -50,21 +50,24 @@ const tareasPorDia = {
 const datosGuardados = JSON.parse(localStorage.getItem("registroTareas")) || {};
 const edicionesGuardadas = JSON.parse(localStorage.getItem("ediciones")) || {};
 if (!edicionesGuardadas[hoyStr]) edicionesGuardadas[hoyStr] = { titulos: {}, tareas: {} };
+if (!datosGuardados[hoyStr]) datosGuardados[hoyStr] = [];
 
 // ================== UI base ==================
 const contenedor = document.getElementById("contenedorTareas");
-
 let modoEdicion = false;
+
 const botonEditar = document.createElement("button");
 botonEditar.textContent = "✏️ Editar";
 botonEditar.style.margin = "10px";
 botonEditar.onclick = () => {
   modoEdicion = !modoEdicion;
   botonEditar.textContent = modoEdicion ? "✅ Terminar edición" : "✏️ Editar";
+  contenedor.innerHTML = "";
+  renderColumnas();
 };
 if (contenedor) document.body.insertBefore(botonEditar, contenedor);
 
-// ================== Helpers de estructura ==================
+// ================== Helpers ==================
 const columnasDef = [
   { id: "c1", titulo: "Búsqueda bases", campo: "comunes1", clase: "" },
   { id: "c2", titulo: "Actualizar registros", campo: "comunes2", clase: "" },
@@ -73,7 +76,6 @@ const columnasDef = [
   { id: "p3", titulo: "Gestiones tercera prioridad", campo: "prioridad3", clase: "amarillo-pastel", extra: ["Emails, reuniones y otros"] },
 ];
 
-// Construye tareas esperadas (con ediciones del día)
 function buildTareasEsperadas(fechaStr) {
   const [anio, mes, diaN] = fechaStr.split("-").map(Number);
   const fecha = new Date(anio, mes - 1, diaN);
@@ -87,9 +89,10 @@ function buildTareasEsperadas(fechaStr) {
   columnasDef.forEach(col => {
     const listaBase = (base[col.campo] || []).slice();
     if (col.extra && Array.isArray(col.extra)) listaBase.push(...col.extra);
+
     listaBase.forEach((original, index) => {
       const key = `${col.id}-${index}`;
-      const name = edits.tareas && edits.tareas[key] ? edits.tareas[key] : original;
+      const name = edits.tareas[key] || original;
       out.push({ key, name });
     });
   });
@@ -103,9 +106,9 @@ function crearColumna(colDef, tareasBase) {
   const div = document.createElement("div");
   div.className = "caja";
 
+  // Título editable
   const h2 = document.createElement("h2");
-  const tituloEditado = edicionesGuardadas[hoyStr].titulos[id] || titulo;
-  h2.textContent = tituloEditado;
+  h2.textContent = edicionesGuardadas[hoyStr].titulos[id] || titulo;
   h2.ondblclick = () => {
     if (!modoEdicion) return;
     const nuevo = prompt("Editar título:", h2.textContent);
@@ -117,18 +120,14 @@ function crearColumna(colDef, tareasBase) {
   };
   div.appendChild(h2);
 
-  const lista = tareasBase.slice();
-  if (colDef.extra && Array.isArray(colDef.extra)) lista.push(...colDef.extra);
-
-  lista.forEach((tareaOriginal, index) => {
+  // Render tareas
+  tareasBase.forEach((tareaOriginal, index) => {
     const key = `${id}-${index}`;
     const nombreTarea = edicionesGuardadas[hoyStr].tareas[key] || tareaOriginal;
 
     const boton = document.createElement("button");
     boton.textContent = nombreTarea;
     boton.className = `task-button ${clase}`;
-
-    if (!datosGuardados[hoyStr]) datosGuardados[hoyStr] = [];
     if (datosGuardados[hoyStr].some(it => (it.key && it.key === key) || it.tarea === nombreTarea)) {
       boton.classList.add("completed");
     }
@@ -149,6 +148,26 @@ function crearColumna(colDef, tareasBase) {
     div.appendChild(boton);
   });
 
+  // Botón para agregar tareas nuevas
+  const btnAgregar = document.createElement("button");
+  btnAgregar.textContent = "+ Agregar tarea";
+  btnAgregar.style.marginTop = "5px";
+  btnAgregar.onclick = () => {
+    if (!modoEdicion) return alert("Activa el modo edición para agregar tareas.");
+    const nuevaTarea = prompt("Nombre de la nueva tarea:");
+    if (nuevaTarea) {
+      const key = `${id}-${Date.now()}`;
+      edicionesGuardadas[hoyStr].tareas[key] = nuevaTarea;
+      const boton = document.createElement("button");
+      boton.textContent = nuevaTarea;
+      boton.className = `task-button ${clase}`;
+      boton.onclick = () => marcarTarea(boton, nuevaTarea, key);
+      div.insertBefore(boton, btnAgregar);
+      guardar();
+    }
+  };
+  div.appendChild(btnAgregar);
+
   contenedor.appendChild(div);
 }
 
@@ -157,7 +176,6 @@ function marcarTarea(boton, nombreTarea, key) {
   if (!boton.classList.contains("completed")) {
     boton.classList.add("completed");
     const hora = new Date().toLocaleTimeString();
-    if (!datosGuardados[hoyStr]) datosGuardados[hoyStr] = [];
     datosGuardados[hoyStr].push({ tarea: nombreTarea, hora, key });
     guardar();
     actualizarHistorial();
@@ -167,18 +185,27 @@ function marcarTarea(boton, nombreTarea, key) {
 function guardar() {
   localStorage.setItem("registroTareas", JSON.stringify(datosGuardados));
   localStorage.setItem("ediciones", JSON.stringify(edicionesGuardadas));
-
   const notas = document.getElementById("notasDia");
   if (notas) localStorage.setItem("notasFijas", notas.value || "");
 }
 
+// ================== Render columnas completo ==================
+function renderColumnas() {
+  contenedor.innerHTML = "";
+  const baseHoy = tareasPorDia[diaNombre] || { prioridad1: [], prioridad2: [], prioridad3: [], comunes1: [], comunes2: [] };
+  columnasDef.forEach(col => {
+    const lista = [...(baseHoy[col.campo] || [])];
+    if (col.extra) lista.push(...col.extra);
+    crearColumna(col, lista);
+  });
+}
+
 // ================== Historial ==================
-function actualizarHistorial(filtro = "7d") {
+function actualizarHistorial() {
   const historial = document.getElementById("historial");
   if (!historial) return;
   historial.innerHTML = "";
 
-  // Generar lista de días de lunes a viernes hasta hoy
   const fechas = [];
   const primerDia = new Date(Object.keys(datosGuardados).sort()[0] || hoyStr);
   let current = new Date(primerDia.getFullYear(), primerDia.getMonth(), primerDia.getDate());
@@ -187,6 +214,7 @@ function actualizarHistorial(filtro = "7d") {
     if (dayName !== "Sábado" && dayName !== "Domingo") {
       const fechaStr = current.toISOString().split("T")[0];
       fechas.push(fechaStr);
+      if (!datosGuardados[fechaStr]) datosGuardados[fechaStr] = [];
     }
     current.setDate(current.getDate() + 1);
   }
@@ -195,8 +223,6 @@ function actualizarHistorial(filtro = "7d") {
 
   fechas.forEach(fecha => {
     const esperadas = buildTareasEsperadas(fecha);
-    if (!datosGuardados[fecha]) datosGuardados[fecha] = [];
-
     const tareasDelDia = datosGuardados[fecha];
     let completadasCount = esperadas.filter(e =>
       tareasDelDia.some(tc => (tc.key && tc.key === e.key) || tc.tarea === e.name)
@@ -209,7 +235,7 @@ function actualizarHistorial(filtro = "7d") {
     let simbolo = "⚠️";
     if (completadasCount === esperadas.length && completadasCount > 0) simbolo = "✅";
     else if (completadasCount === 0 && esperadas.length > 0) simbolo = "❌";
-    else if (esperadas.length === 0) simbolo = "🏝️"; // Fuera de oficina
+    else if (esperadas.length === 0) simbolo = "🏝️"; // fuera de oficina
 
     encabezado.textContent = `${simbolo} ${completadasCount}/${esperadas.length} - ${fecha}`;
     encabezado.style.cursor = "pointer";
@@ -250,10 +276,9 @@ function actualizarGrafico() {
 }
 
 // ================== Render inicial ==================
-const baseHoy = tareasPorDia[diaNombre] || { prioridad1: [], prioridad2: [], prioridad3: [], comunes1: [], comunes2: [] };
-columnasDef.forEach(col => crearColumna(col, baseHoy[col.campo] || []));
+renderColumnas();
 
-// Notas (persistentes entre días)
+// Notas persistentes
 const notas = document.getElementById("notasDia");
 if (notas) {
   notas.value = localStorage.getItem("notasFijas") || "";
