@@ -1,42 +1,92 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Registro de Tareas Diario</title>
   <link rel="stylesheet" href="estilos.css">
+  <style>
+    /* Contenedor de gráficos lado a lado */
+    .graficos-container {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin-top: 30px;
+    }
+    .graficos-container canvas {
+      flex: 1 1 400px;
+      max-width: 100%;
+    }
+
+    /* Estilo título historial con cursor y flecha */
+    .titulo-historial {
+      cursor: pointer;
+      user-select: none;
+    }
+    .titulo-historial::before {
+      content: "▶ ";
+      transition: transform 0.2s ease;
+    }
+    .titulo-historial.abierto::before {
+      content: "▼ ";
+    }
+  </style>
 </head>
 <body>
   <h1>Registro de Tareas Diario</h1>
+
+  <!-- Día y fecha -->
   <div class="dia-semana" id="diaSemana"></div>
+
+  <!-- Contenedor de tareas -->
   <div class="contenedor" id="contenedorTareas"></div>
 
+  <!-- Caja de notas -->
   <div class="caja-notas">
     <h2>Notas:</h2>
     <textarea id="notasDia" placeholder="Escribe tus notas aquí..."></textarea>
   </div>
 
+  <!-- Botones de opciones -->
   <div class="botones-opciones">
     <button onclick="exportarCSV()">Exportar CSV</button>
     <button onclick="limpiarAntiguos()">Limpiar Registros Antiguos</button>
   </div>
 
-  <h2 class="titulo-historial">Historial</h2>
-  <div class="historial-container" id="historial"></div>
-<div id="filtrosHistorial">
-  <button onclick="actualizarHistorial('7d')">Últimos 7 días</button>
-  <button onclick="actualizarHistorial('mes')">Mes actual</button>
-  <button onclick="actualizarHistorial('todo')">Todo</button>
-</div>
+  <!-- Historial plegable -->
+  <h2 class="titulo-historial" id="tituloHistorial" onclick="toggleHistorial()">Historial</h2>
+  <div class="historial-container" id="historial" style="display:none;"></div>
 
-<div id="historial"></div>
+  <!-- Filtros de historial -->
+  <div id="filtrosHistorial" style="margin-top:10px; display:none;">
+    <button onclick="actualizarHistorial('7d')">Últimos 7 días</button>
+    <button onclick="actualizarHistorial('mes')">Mes actual</button>
+    <button onclick="actualizarHistorial('todo')">Todo</button>
+  </div>
 
-  <!-- Canvas para el gráfico -->
-  <canvas id="graficoSemanal" width="400" height="200"></canvas>
+  <!-- Contenedor de gráficos lado a lado -->
+  <div class="graficos-container">
+    <canvas id="graficoSemanal" width="400" height="200"></canvas>
+    <canvas id="graficoHoras" width="400" height="200"></canvas>
+  </div>
 
-  <!-- Chart.js primero -->
+  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- Luego tu script -->
+  <!-- Script principal -->
   <script src="script.js"></script>
+
+  <!-- Función para desplegar/plegar historial -->
+  <script>
+    function toggleHistorial() {
+      const historialContainer = document.getElementById("historial");
+      const filtros = document.getElementById("filtrosHistorial");
+      const titulo = document.getElementById("tituloHistorial");
+      const visible = historialContainer.style.display === "block";
+
+      historialContainer.style.display = visible ? "none" : "block";
+      filtros.style.display = visible ? "none" : "block";
+      titulo.classList.toggle("abierto", !visible);
+    }
+  </script>
 </body>
 </html>
