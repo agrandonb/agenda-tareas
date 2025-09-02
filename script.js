@@ -9,41 +9,11 @@ if (elDiaSemana) elDiaSemana.textContent = `${diaNombre} - ${hoyStr}`;
 
 // ================== Configuración de tareas base ==================
 const tareasPorDia = {
-  "Lunes": {
-    prioridad1: ["Comité", "Reunión PSQ", "Envío sugerencias CK"],
-    prioridad2: ["Gestión ingreso médico y ps", "Revisión malla día siguiente", "Revisión activos"],
-    prioridad3: ["Coordinar con PI y EPT", "Gestiones agencia"],
-    comunes1: ["DATA", "Databricks", "PA activos"],
-    comunes2: ["Ingreso funcionarios", "Reingreso SUSESO", "Excel gestión SM", "Malla PSQ"]
-  },
-  "Martes": {
-    prioridad1: ["Comité", "Reunión PSQ", "DP", "Envío sugerencias CK"],
-    prioridad2: ["Gestión ingreso médico y ps", "Coordinar con PI y EPT", "Revisión malla día siguiente"],
-    prioridad3: ["Revisión >90 días", "Revisión reingreso SUSESO", "Gestiones agencia"],
-    comunes1: ["DATA", "Databricks", "PA activos"],
-    comunes2: ["Ingreso funcionarios", "Reingreso SUSESO", "Excel gestión SM", "Malla PSQ"]
-  },
-  "Miércoles": {
-    prioridad1: ["Comité", "Reunión PSQ", "Envío sugerencias CK"],
-    prioridad2: ["Gestión ingreso médico y ps", "Revisión malla día siguiente", "Revisión activos"],
-    prioridad3: ["Coordinar con PI y EPT", "Gestiones agencia"],
-    comunes1: ["DATA", "Databricks", "PA activos"],
-    comunes2: ["Ingreso funcionarios", "Reingreso SUSESO", "Excel gestión SM", "Malla PSQ"]
-  },
-  "Jueves": {
-    prioridad1: ["Comité", "Reunión PSQ", "DP", "Envío sugerencias CK"],
-    prioridad2: ["Gestión ingreso médico y ps", "Coordinar con PI y EPT", "Revisión malla día siguiente"],
-    prioridad3: ["Revisión >90 días", "Revisión reingreso SUSESO", "Revisión activos", "Gestiones agencia"],
-    comunes1: ["DATA", "Databricks", "PA activos"],
-    comunes2: ["Ingreso funcionarios", "Reingreso SUSESO", "Excel gestión SM", "Malla PSQ"]
-  },
-  "Viernes": {
-    prioridad1: ["Comité", "Reunión PSQ", "Envío sugerencias CK"],
-    prioridad2: ["Gestión ingreso médico y ps", "Revisión malla día siguiente"],
-    prioridad3: ["Coordinar con PI y EPT", "Gestiones agencia"],
-    comunes1: ["DATA", "Databricks", "PA activos"],
-    comunes2: ["Ingreso funcionarios", "Reingreso SUSESO", "Excel gestión SM", "Malla PSQ"]
-  }
+  "Lunes": { prioridad1: ["Comité", "Reunión PSQ", "Envío sugerencias CK"], prioridad2: ["Gestión ingreso médico y ps", "Revisión malla día siguiente", "Revisión activos"], prioridad3: ["Coordinar con PI y EPT", "Gestiones agencia"], comunes1: ["DATA", "Databricks", "PA activos"], comunes2: ["Ingreso funcionarios", "Reingreso SUSESO", "Excel gestión SM", "Malla PSQ"] },
+  "Martes": { prioridad1: ["Comité", "Reunión PSQ", "DP", "Envío sugerencias CK"], prioridad2: ["Gestión ingreso médico y ps", "Coordinar con PI y EPT", "Revisión malla día siguiente"], prioridad3: ["Revisión >90 días", "Revisión reingreso SUSESO", "Gestiones agencia"], comunes1: ["DATA", "Databricks", "PA activos"], comunes2: ["Ingreso funcionarios", "Reingreso SUSESO", "Excel gestión SM", "Malla PSQ"] },
+  "Miércoles": { prioridad1: ["Comité", "Reunión PSQ", "Envío sugerencias CK"], prioridad2: ["Gestión ingreso médico y ps", "Revisión malla día siguiente", "Revisión activos"], prioridad3: ["Coordinar con PI y EPT", "Gestiones agencia"], comunes1: ["DATA", "Databricks", "PA activos"], comunes2: ["Ingreso funcionarios", "Reingreso SUSESO", "Excel gestión SM", "Malla PSQ"] },
+  "Jueves": { prioridad1: ["Comité", "Reunión PSQ", "DP", "Envío sugerencias CK"], prioridad2: ["Gestión ingreso médico y ps", "Coordinar con PI y EPT", "Revisión malla día siguiente"], prioridad3: ["Revisión >90 días", "Revisión reingreso SUSESO", "Revisión activos", "Gestiones agencia"], comunes1: ["DATA", "Databricks", "PA activos"], comunes2: ["Ingreso funcionarios", "Reingreso SUSESO", "Excel gestión SM", "Malla PSQ"] },
+  "Viernes": { prioridad1: ["Comité", "Reunión PSQ", "Envío sugerencias CK"], prioridad2: ["Gestión ingreso médico y ps", "Revisión malla día siguiente"], prioridad3: ["Coordinar con PI y EPT", "Gestiones agencia"], comunes1: ["DATA", "Databricks", "PA activos"], comunes2: ["Ingreso funcionarios", "Reingreso SUSESO", "Excel gestión SM", "Malla PSQ"] }
 };
 
 // ================== Storage ==================
@@ -228,7 +198,7 @@ function actualizarHistorial() {
     encabezado.style.cursor = "pointer";
 
     let simbolo;
-    if (tareasDelDia.length === 0 && fecha !== hoyStr) simbolo = "⚪"; // fuera oficina
+    if (tareasDelDia.length === 0 && fecha !== hoyStr) simbolo = "⚪"; 
     else if (completadasCount === esperadas.length) simbolo = "✅";
     else if (completadasCount === 0) simbolo = "❌";
     else simbolo = "⚠️";
@@ -299,7 +269,7 @@ function actualizarGraficoHoras() {
   const grafHoras = document.getElementById("graficoHoras");
   if (!grafHoras || !window.Chart) return;
 
-  const horasRango = Array.from({length: 10}, (_, i) => 8 + i); // 8-17
+  const horasRango = Array.from({length: 10}, (_, i) => 8 + i).reverse(); // 17 → 8
   const tareasUnicas = [...new Set((datosGuardados[hoyStr] || []).map(r => r.tarea))];
 
   const datasets = tareasUnicas.map((tarea, idx) => {
@@ -323,7 +293,10 @@ function actualizarGraficoHoras() {
       indexAxis: 'y',
       responsive: true,
       plugins: { title: { display: true, text: 'Hora tarea completada' }, legend: { position: 'bottom' } },
-      scales: { x: { title: { display: true, text: 'Cantidad de veces presionada' } }, y: { title: { display: true, text: 'Hora' } } }
+      scales: { 
+        x: { title: { display: true, text: 'Cantidad de veces presionada' } }, 
+        y: { title: { display: true, text: 'Hora' } } 
+      }
     }
   });
 }
