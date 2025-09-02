@@ -48,8 +48,6 @@ const tareasPorDia = {
 
 // ================== Storage ==================
 const datosGuardados = JSON.parse(localStorage.getItem("registroTareas")) || {};
-if (!datosGuardados[hoyStr]) datosGuardados[hoyStr] = [];
-
 const edicionesGuardadas = JSON.parse(localStorage.getItem("ediciones")) || {};
 if (!edicionesGuardadas[hoyStr]) edicionesGuardadas[hoyStr] = { titulos: {}, tareas: {} };
 
@@ -89,7 +87,6 @@ function buildTareasEsperadas(fechaStr) {
   columnasDef.forEach(col => {
     const listaBase = (base[col.campo] || []).slice();
     if (col.extra && Array.isArray(col.extra)) listaBase.push(...col.extra);
-
     listaBase.forEach((original, index) => {
       const key = `${col.id}-${index}`;
       const name = edits.tareas && edits.tareas[key] ? edits.tareas[key] : original;
@@ -131,6 +128,7 @@ function crearColumna(colDef, tareasBase) {
     boton.textContent = nombreTarea;
     boton.className = `task-button ${clase}`;
 
+    if (!datosGuardados[hoyStr]) datosGuardados[hoyStr] = [];
     if (datosGuardados[hoyStr].some(it => (it.key && it.key === key) || it.tarea === nombreTarea)) {
       boton.classList.add("completed");
     }
@@ -159,6 +157,7 @@ function marcarTarea(boton, nombreTarea, key) {
   if (!boton.classList.contains("completed")) {
     boton.classList.add("completed");
     const hora = new Date().toLocaleTimeString();
+    if (!datosGuardados[hoyStr]) datosGuardados[hoyStr] = [];
     datosGuardados[hoyStr].push({ tarea: nombreTarea, hora, key });
     guardar();
     actualizarHistorial();
@@ -178,24 +177,40 @@ function actualizarHistorial(filtro = "7d") {
   const historial = document.getElementById("historial");
   if (!historial) return;
   historial.innerHTML = "";
-  const dias = Object.keys(datosGuardados).sort().reverse();
 
-  let fechasFiltradas = dias;
-  if (filtro === "7d") fechasFiltradas = dias.slice(0, 7);
+  // Generar lista de días de lunes a viernes hasta hoy
+  const fechas = [];
+  const primerDia = new Date(Object.keys(datosGuardados).sort()[0] || hoyStr);
+  let current = new Date(primerDia.getFullYear(), primerDia.getMonth(), primerDia.getDate());
+  while (current <= hoy) {
+    const dayName = diasSemana[current.getDay()];
+    if (dayName !== "Sábado" && dayName !== "Domingo") {
+      const fechaStr = current.toISOString().split("T")[0];
+      fechas.push(fechaStr);
+    }
+    current.setDate(current.getDate() + 1);
+  }
 
-  fechasFiltradas.forEach(fecha => {
+  fechas.reverse();
+
+  fechas.forEach(fecha => {
     const esperadas = buildTareasEsperadas(fecha);
-    const tareasDelDia = datosGuardados[fecha] || [];
-    const completadasCount = esperadas.filter(e =>
+    if (!datosGuardados[fecha]) datosGuardados[fecha] = [];
+
+    const tareasDelDia = datosGuardados[fecha];
+    let completadasCount = esperadas.filter(e =>
       tareasDelDia.some(tc => (tc.key && tc.key === e.key) || tc.tarea === e.name)
     ).length;
 
     const div = document.createElement("div");
     div.className = "historial-dia";
     const encabezado = document.createElement("h3");
+
     let simbolo = "⚠️";
-    if (completadasCount === esperadas.length) simbolo = "✅";
-    else if (completadasCount === 0) simbolo = "❌";
+    if (completadasCount === esperadas.length && completadasCount > 0) simbolo = "✅";
+    else if (completadasCount === 0 && esperadas.length > 0) simbolo = "❌";
+    else if (esperadas.length === 0) simbolo = "🏝️"; // Fuera de oficina
+
     encabezado.textContent = `${simbolo} ${completadasCount}/${esperadas.length} - ${fecha}`;
     encabezado.style.cursor = "pointer";
     div.appendChild(encabezado);
