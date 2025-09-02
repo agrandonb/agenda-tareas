@@ -1,4 +1,4 @@
-// ================== Fecha y encabezado ==================
+// ============= Fecha y encabezado ==================
 const diasSemana = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 const hoy = new Date();
 const hoyStr = hoy.toISOString().split("T")[0];
@@ -50,14 +50,12 @@ const tareasPorDia = {
 const datosGuardados = JSON.parse(localStorage.getItem("registroTareas")) || {};
 if (!datosGuardados[hoyStr]) datosGuardados[hoyStr] = [];
 
-// Ediciones por día (títulos y nombres de tareas)
 const edicionesGuardadas = JSON.parse(localStorage.getItem("ediciones")) || {};
 if (!edicionesGuardadas[hoyStr]) edicionesGuardadas[hoyStr] = { titulos: {}, tareas: {} };
 
 // ================== UI base ==================
 const contenedor = document.getElementById("contenedorTareas");
 
-// Modo edición
 let modoEdicion = false;
 const botonEditar = document.createElement("button");
 botonEditar.textContent = "✏️ Editar";
@@ -77,8 +75,7 @@ const columnasDef = [
   { id: "p3", titulo: "Gestiones tercera prioridad", campo: "prioridad3", clase: "amarillo-pastel", extra: ["Emails, reuniones y otros"] },
 ];
 
-// Construye la lista esperada de tareas para una fecha, aplicando ediciones de ese día.
-// Devuelve array de objetos: [{key, name}]
+// Construye tareas esperadas (con ediciones del día)
 function buildTareasEsperadas(fechaStr) {
   const [anio, mes, diaN] = fechaStr.split("-").map(Number);
   const fecha = new Date(anio, mes - 1, diaN);
@@ -103,32 +100,15 @@ function buildTareasEsperadas(fechaStr) {
   return out;
 }
 
-// Para compatibilidad con código previo (si necesitas nombres solo):
-function obtenerTareasDia(fechaStr) {
-  return buildTareasEsperadas(fechaStr).map(i => i.name);
-}
-
-// Estado de un día (usando key o nombre para compatibilidad con registros antiguos)
-function obtenerEstadoDia(fechaStr, tareasCompletadas) {
-  const esperadas = buildTareasEsperadas(fechaStr);
-  const faltantes = esperadas.filter(e =>
-    !tareasCompletadas.some(tc => (tc.key && tc.key === e.key) || tc.tarea === e.name)
-  );
-  return faltantes.length === 0 ? "✅ OK" : `❌ Incompleto: faltó ${faltantes.map(f => f.name).join(", ")}`;
-}
-
-// ================== Render de columnas ==================
+// ================== Render columnas ==================
 function crearColumna(colDef, tareasBase) {
   const { id, titulo, clase } = colDef;
   const div = document.createElement("div");
   div.className = "caja";
 
-  // Título (aplica edición del día)
   const h2 = document.createElement("h2");
   const tituloEditado = edicionesGuardadas[hoyStr].titulos[id] || titulo;
   h2.textContent = tituloEditado;
-
-  // Doble clic para editar título (persistente por día)
   h2.ondblclick = () => {
     if (!modoEdicion) return;
     const nuevo = prompt("Editar título:", h2.textContent);
@@ -140,7 +120,6 @@ function crearColumna(colDef, tareasBase) {
   };
   div.appendChild(h2);
 
-  // Tareas (aplicando ediciones del día para los nombres)
   const lista = tareasBase.slice();
   if (colDef.extra && Array.isArray(colDef.extra)) lista.push(...colDef.extra);
 
@@ -152,12 +131,10 @@ function crearColumna(colDef, tareasBase) {
     boton.textContent = nombreTarea;
     boton.className = `task-button ${clase}`;
 
-    // Pintar como completada si ya está registrada (por key o por nombre)
     if (datosGuardados[hoyStr].some(it => (it.key && it.key === key) || it.tarea === nombreTarea)) {
       boton.classList.add("completed");
     }
 
-    // Clic: marcar o editar nombre (persistente por día)
     boton.onclick = () => {
       if (!modoEdicion) {
         marcarTarea(boton, nombreTarea, key);
@@ -167,8 +144,6 @@ function crearColumna(colDef, tareasBase) {
           boton.textContent = nuevo;
           edicionesGuardadas[hoyStr].tareas[key] = nuevo;
           guardar();
-          // Si estaba marcada con el nombre antiguo pero sin key, mantener consistencia:
-          // (no tocamos histórico; el matching por key ya nos cubre a futuro)
         }
       }
     };
@@ -184,7 +159,7 @@ function marcarTarea(boton, nombreTarea, key) {
   if (!boton.classList.contains("completed")) {
     boton.classList.add("completed");
     const hora = new Date().toLocaleTimeString();
-    datosGuardados[hoyStr].push({ tarea: nombreTarea, hora, key }); // guardamos key para robustez
+    datosGuardados[hoyStr].push({ tarea: nombreTarea, hora, key });
     guardar();
     actualizarHistorial();
   }
@@ -193,70 +168,44 @@ function marcarTarea(boton, nombreTarea, key) {
 function guardar() {
   localStorage.setItem("registroTareas", JSON.stringify(datosGuardados));
   localStorage.setItem("ediciones", JSON.stringify(edicionesGuardadas));
+
   const notas = document.getElementById("notasDia");
-  if (notas) localStorage.setItem("notasDia-" + hoyStr, notas.value || "");
+  if (notas) localStorage.setItem("notasFijas", notas.value || "");
 }
 
-// ================== Historial (compacto y con faltantes al click) ==================
+// ================== Historial ==================
 function actualizarHistorial(filtro = "7d") {
   const historial = document.getElementById("historial");
   if (!historial) return;
-
   historial.innerHTML = "";
   const dias = Object.keys(datosGuardados).sort().reverse();
 
   let fechasFiltradas = dias;
   if (filtro === "7d") fechasFiltradas = dias.slice(0, 7);
-  else if (filtro === "mes") {
-    const mesActual = hoy.getMonth();
-    fechasFiltradas = dias.filter(d => {
-      const [y, m] = d.split("-").map(Number);
-      return (m - 1) === mesActual && new Date(y, m - 1, 1);
-    });
-  }
 
   fechasFiltradas.forEach(fecha => {
-    const dayIndex = new Date(fecha).getDay();
-    if (dayIndex === 0 || dayIndex === 6) return; // ocultar fines de semana
-
-    const tareasDelDia = datosGuardados[fecha] || [];
     const esperadas = buildTareasEsperadas(fecha);
-
+    const tareasDelDia = datosGuardados[fecha] || [];
     const completadasCount = esperadas.filter(e =>
       tareasDelDia.some(tc => (tc.key && tc.key === e.key) || tc.tarea === e.name)
     ).length;
 
-    const faltantes = esperadas
-      .filter(e => !tareasDelDia.some(tc => (tc.key && tc.key === e.key) || tc.tarea === e.name))
-      .map(e => e.name);
-
     const div = document.createElement("div");
     div.className = "historial-dia";
-
     const encabezado = document.createElement("h3");
     let simbolo = "⚠️";
     if (completadasCount === esperadas.length) simbolo = "✅";
     else if (completadasCount === 0) simbolo = "❌";
     encabezado.textContent = `${simbolo} ${completadasCount}/${esperadas.length} - ${fecha}`;
     encabezado.style.cursor = "pointer";
-
-    const lista = document.createElement("ul");
-    lista.style.display = "none";
-    lista.innerHTML = faltantes.map(t => `<li>${t}</li>`).join("");
-
-    encabezado.onclick = () => {
-      lista.style.display = lista.style.display === "none" ? "block" : "none";
-    };
-
     div.appendChild(encabezado);
-    div.appendChild(lista);
     historial.appendChild(div);
   });
 
   actualizarGrafico();
 }
 
-// ================== Gráfico semanal (Chart.js) ==================
+// ================== Gráfico semanal ==================
 function actualizarGrafico() {
   const canvas = document.getElementById("graficoSemanal");
   if (!canvas || !window.Chart) return;
@@ -277,73 +226,23 @@ function actualizarGrafico() {
     type: 'bar',
     data: {
       labels: fechas,
-      datasets: [{
-        label: '% de cumplimiento',
-        data: data,
-        borderWidth: 1
-      }]
+      datasets: [{ label: '% de cumplimiento', data: data, borderWidth: 1 }]
     },
     options: {
-      scales: {
-        y: {
-          min: 0,
-          max: 100,
-          ticks: { callback: v => v + "%" }
-        }
-      }
+      scales: { y: { min: 0, max: 100, ticks: { callback: v => v + "%" } } }
     }
   });
 }
 
 // ================== Render inicial ==================
 const baseHoy = tareasPorDia[diaNombre] || { prioridad1: [], prioridad2: [], prioridad3: [], comunes1: [], comunes2: [] };
-columnasDef.forEach(col => {
-  crearColumna(col, baseHoy[col.campo] || []);
-});
+columnasDef.forEach(col => crearColumna(col, baseHoy[col.campo] || []));
 
-// Notas del día (por fecha)
+// Notas (persistentes entre días)
 const notas = document.getElementById("notasDia");
 if (notas) {
-  notas.value = localStorage.getItem("notasDia-" + hoyStr) || "";
+  notas.value = localStorage.getItem("notasFijas") || "";
   notas.addEventListener("input", () => guardar());
 }
 
-// Cargar historial y gráfico
 actualizarHistorial();
-
-
-function actualizarGrafico() {
-  const fechas = Object.keys(datosGuardados).sort().slice(-7);
-  const data = fechas.map(fecha => {
-    const tareas = datosGuardados[fecha];
-    const totalTareas = obtenerTareasDia(fecha);
-    const completadas = totalTareas.filter(t =>
-      tareas.some(tc => tc.tarea === t)
-    ).length;
-    return (completadas / totalTareas.length) * 100;
-  });
-
-  const ctx = document.getElementById("graficoSemanal").getContext("2d");
-  if (window.miGrafico) window.miGrafico.destroy();
-  window.miGrafico = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: fechas,
-      datasets: [{
-        label: '% de cumplimiento',
-        data: data,
-        borderWidth: 1
-      }]
-    },
-    options: {
-      scales: {
-        y: {
-          min: 0,
-          max: 100,
-          ticks: { callback: v => v + "%" }
-        }
-      }
-    }
-  });
-}
-
