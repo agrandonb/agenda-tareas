@@ -1,4 +1,4 @@
-/* Fuente moderna y variables de color */ 
+/* Fuente moderna y variables de color */  
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
 
 :root {
@@ -184,13 +184,32 @@ h1 {
   justify-content: space-between;
 }
 .graficos-container canvas {
-  flex: 1 1 300px;   /* ancho base */
-  max-width: 48%;    /* para que estén uno al lado del otro */
-  height: 200px;     /* altura fija */
+  flex: 1 1 45%;   /* cada gráfico ocupa aproximadamente la mitad */
+  max-width: 45%;  /* evita que se expandan demasiado */
+  height: 200px;   /* altura fija */
   background-color: #ffffff;
   padding: 10px;
   border-radius: 10px;
   box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+/* Calendario plegable */
+.titulo-calendario {
+  cursor: pointer;
+  user-select: none;
+  margin-top: 20px;
+  font-weight: 600;
+}
+.titulo-calendario::before {
+  content: "▶ ";
+  transition: transform 0.2s ease;
+}
+.titulo-calendario.abierto::before {
+  content: "▼ ";
+}
+.calendario-container {
+  display: none;
+  margin-top: 10px;
 }
 
 /* Responsive */
