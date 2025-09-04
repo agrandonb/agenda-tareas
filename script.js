@@ -301,6 +301,51 @@ function actualizarGraficoHoras() {
   });
 }
 
+// ================== Calendario ==================
+function toggleCalendario() {
+  const cont = document.getElementById("contenedorCalendario");
+  const titulo = document.getElementById("tituloCalendario");
+  const visible = cont.style.display === "block";
+  cont.style.display = visible ? "none" : "block";
+  titulo.classList.toggle("abierto", !visible);
+}
+
+function agregarTareaCalendario(fijaSemana) {
+  const fecha = document.getElementById("fechaSeleccion").value;
+  const tarea = document.getElementById("nuevaTareaCalendario").value.trim();
+  const caja = document.getElementById("selectCaja").value;
+
+  if (!fecha || !tarea || !caja) {
+    alert("Debes seleccionar fecha, tarea y caja.");
+    return;
+  }
+
+  const [anio, mes, dia] = fecha.split("-").map(Number);
+  const fechaObj = new Date(anio, mes - 1, dia);
+  const nombreDia = diasSemana[fechaObj.getDay()];
+
+  if (fijaSemana) {
+    if (!tareasPorDia[nombreDia]) tareasPorDia[nombreDia] = { prioridad1: [], prioridad2: [], prioridad3: [], comunes1: [], comunes2: [] };
+    tareasPorDia[nombreDia][caja].push(tarea);
+    alert(`✅ "${tarea}" se agregó fijo a ${nombreDia} en ${caja}`);
+  } else {
+    if (!datosGuardados[fecha]) datosGuardados[fecha] = [];
+    const key = `cal-${Date.now()}`;
+    datosGuardados[fecha].push({ tarea, hora: "--:--", key, caja });
+
+    if (fecha === hoyStr) {
+      const colDef = columnasDef.find(c => c.id === caja || c.campo === caja);
+      if (colDef) crearColumna(colDef, [tarea]);
+    }
+
+    alert(`✅ "${tarea}" se agregó solo para ${fecha} en ${caja}`);
+  }
+
+  guardar();
+  actualizarHistorial();
+  document.getElementById("nuevaTareaCalendario").value = "";
+}
+
 // ================== Render inicial ==================
 const baseHoy = tareasPorDia[diaNombre] || { prioridad1: [], prioridad2: [], prioridad3: [], comunes1: [], comunes2: [] };
 columnasDef.forEach(col => crearColumna(col, baseHoy[col.campo] || []));
