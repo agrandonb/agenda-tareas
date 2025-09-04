@@ -41,6 +41,28 @@
   <!-- Contenedor de tareas -->
   <div class="contenedor" id="contenedorTareas"></div>
 
+  <h2 class="titulo-calendario" id="tituloCalendario" onclick="toggleCalendario()">📅 Calendario</h2>
+<div id="contenedorCalendario" style="display:none; margin:15px 0; padding:15px; background:#fff; border-radius:10px; box-shadow:0 2px 6px rgba(0,0,0,0.1);">
+  <label for="fechaSeleccion">Selecciona una fecha:</label>
+  <input type="date" id="fechaSeleccion">
+
+  <label for="selectCaja">Selecciona caja:</label>
+  <select id="selectCaja">
+    <option value="p1">Gestiones primera prioridad</option>
+    <option value="p2">Gestiones segunda prioridad</option>
+    <option value="p3">Gestiones tercera prioridad</option>
+    <option value="c1">Búsqueda bases</option>
+    <option value="c2">Actualizar registros</option>
+  </select>
+
+  <input type="text" id="nuevaTareaCalendario" placeholder="Escribe nueva tarea...">
+
+  <div style="margin-top:10px;">
+    <button onclick="agregarTareaCalendario(false)">➕ Solo este día</button>
+    <button onclick="agregarTareaCalendario(true)">📌 Fijo este día de la semana</button>
+  </div>
+</div>
+
   <!-- Caja de notas -->
   <div class="caja-notas">
     <h2>Notas:</h2>
