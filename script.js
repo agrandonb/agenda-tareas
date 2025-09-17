@@ -1,360 +1,349 @@
 // ================== Fecha y encabezado ==================
-const diasSemana = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+const diasSemana = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
 const hoy = new Date();
 const hoyStr = hoy.toISOString().split("T")[0];
 const diaNombre = diasSemana[hoy.getDay()];
+document.getElementById("diaSemana").textContent = `${diaNombre} - ${hoyStr}`;
 
-const elDiaSemana = document.getElementById("diaSemana");
-if (elDiaSemana) elDiaSemana.textContent = `${diaNombre} - ${hoyStr}`;
+// ================== Storage y datos ==================
+const KEY_REGISTRO   = "registroTareas";
+const KEY_EDICIONES  = "ediciones";
+const KEY_TAREAS_DIA = "tareasSemanales";
+const KEY_COLUMNAS   = "columnasDefUser";
+const KEY_REG_HORAS  = "registroHoras";
+const KEY_NOTAS      = "notasFijas";
 
-// ================== Configuración de tareas base ==================
-const tareasPorDia = {
-  "Lunes": { prioridad1: ["Comité", "Reunión PSQ", "Envío sugerencias CK"], prioridad2: ["Gestión ingreso médico y ps", "Revisión malla día siguiente", "Revisión activos"], prioridad3: ["Coordinar con PI y EPT", "Gestiones agencia"], comunes1: ["DATA", "Databricks", "PA activos"], comunes2: ["Ingreso funcionarios", "Reingreso SUSESO", "Excel gestión SM", "Malla PSQ"] },
-  "Martes": { prioridad1: ["Comité", "Reunión PSQ", "DP", "Envío sugerencias CK"], prioridad2: ["Gestión ingreso médico y ps", "Coordinar con PI y EPT", "Revisión malla día siguiente"], prioridad3: ["Revisión >90 días", "Revisión reingreso SUSESO", "Gestiones agencia"], comunes1: ["DATA", "Databricks", "PA activos"], comunes2: ["Ingreso funcionarios", "Reingreso SUSESO", "Excel gestión SM", "Malla PSQ"] },
-  "Miércoles": { prioridad1: ["Comité", "Reunión PSQ", "Envío sugerencias CK"], prioridad2: ["Gestión ingreso médico y ps", "Revisión malla día siguiente", "Revisión activos"], prioridad3: ["Coordinar con PI y EPT", "Gestiones agencia"], comunes1: ["DATA", "Databricks", "PA activos"], comunes2: ["Ingreso funcionarios", "Reingreso SUSESO", "Excel gestión SM", "Malla PSQ"] },
-  "Jueves": { prioridad1: ["Comité", "Reunión PSQ", "DP", "Envío sugerencias CK"], prioridad2: ["Gestión ingreso médico y ps", "Coordinar con PI y EPT", "Revisión malla día siguiente"], prioridad3: ["Revisión >90 días", "Revisión reingreso SUSESO", "Revisión activos", "Gestiones agencia"], comunes1: ["DATA", "Databricks", "PA activos"], comunes2: ["Ingreso funcionarios", "Reingreso SUSESO", "Excel gestión SM", "Malla PSQ"] },
-  "Viernes": { prioridad1: ["Comité", "Reunión PSQ", "Envío sugerencias CK"], prioridad2: ["Gestión ingreso médico y ps", "Revisión malla día siguiente"], prioridad3: ["Coordinar con PI y EPT", "Gestiones agencia"], comunes1: ["DATA", "Databricks", "PA activos"], comunes2: ["Ingreso funcionarios", "Reingreso SUSESO", "Excel gestión SM", "Malla PSQ"] }
-};
+let datosGuardados     = JSON.parse(localStorage.getItem(KEY_REGISTRO))   || {};
+let edicionesGuardadas = JSON.parse(localStorage.getItem(KEY_EDICIONES)) || {};
+let tareasPorDiaUser   = JSON.parse(localStorage.getItem(KEY_TAREAS_DIA)) || {};
+let columnasDef        = JSON.parse(localStorage.getItem(KEY_COLUMNAS))   || [
+  { id:"c1", titulo:"Búsqueda bases", campo:"comunes1", clase:"" },
+  { id:"c2", titulo:"Actualizar registros", campo:"comunes2", clase:"" },
+  { id:"p1", titulo:"Gestiones primera prioridad", campo:"prioridad1", clase:"rojo-pastel" },
+  { id:"p2", titulo:"Gestiones segunda prioridad", campo:"prioridad2", clase:"naranjo-pastel" },
+  { id:"p3", titulo:"Gestiones tercera prioridad", campo:"prioridad3", clase:"amarillo-pastel" }
+];
+let registroHoras = JSON.parse(localStorage.getItem(KEY_REG_HORAS)) || [];
 
-// ================== Storage ==================
-const datosGuardados = JSON.parse(localStorage.getItem("registroTareas")) || {};
-if (!datosGuardados[hoyStr]) datosGuardados[hoyStr] = [];
+// ================== Guardar datos ==================
+function guardarTodo(){
+  localStorage.setItem(KEY_REGISTRO,   JSON.stringify(datosGuardados));
+  localStorage.setItem(KEY_TAREAS_DIA, JSON.stringify(tareasPorDiaUser));
+  localStorage.setItem(KEY_EDICIONES,  JSON.stringify(edicionesGuardadas));
+  localStorage.setItem(KEY_COLUMNAS,   JSON.stringify(columnasDef));
+  localStorage.setItem(KEY_REG_HORAS,  JSON.stringify(registroHoras));
+  const notasEl = document.getElementById("notasDia");
+  if(notasEl) localStorage.setItem(KEY_NOTAS, notasEl.value);
+}
 
-const edicionesGuardadas = JSON.parse(localStorage.getItem("ediciones")) || {};
-if (!edicionesGuardadas[hoyStr]) edicionesGuardadas[hoyStr] = { titulos: {}, tareas: {} };
+// ================== Util ==================
+function limpiarContenedor(){ document.getElementById("contenedorTareas").innerHTML=""; }
+function reflowGridColumns(){ 
+  const cont = document.getElementById("contenedorTareas"); 
+  if(cont) cont.style.gridTemplateColumns=`repeat(${columnasDef.length},1fr)`; 
+}
 
-let registroHoras = JSON.parse(localStorage.getItem("registroHoras")) || [];
-
-// ================== UI base ==================
-const contenedor = document.getElementById("contenedorTareas");
-
-let modoEdicion = false;
+// ================== Modo edición ==================
+let modoEdicion=false;
 const botonEditar = document.createElement("button");
-botonEditar.textContent = "✏️ Editar";
-botonEditar.style.margin = "10px";
+botonEditar.textContent="✏️ Editar";
+botonEditar.style.margin="10px";
+botonEditar.id = "botonEditar";
 botonEditar.onclick = () => {
   modoEdicion = !modoEdicion;
   botonEditar.textContent = modoEdicion ? "✅ Terminar edición" : "✏️ Editar";
-  document.querySelectorAll(".add-task-btn").forEach(b => b.style.display = modoEdicion ? "inline-block" : "none");
+  document.querySelectorAll(".add-task-btn,.del-col-btn").forEach(b => b.style.display = modoEdicion ? "inline-block" : "none");
+  document.querySelectorAll(".btn-eliminar-tarea,.btn-mover-tarea").forEach(b => b.style.display = modoEdicion ? "inline-block" : "none");
 };
-if (contenedor) document.body.insertBefore(botonEditar, contenedor);
+document.getElementById("botonEditarContainer")?.appendChild(botonEditar);
 
-// ================== Helpers de estructura ==================
-const columnasDef = [
-  { id: "c1", titulo: "Búsqueda bases", campo: "comunes1", clase: "" },
-  { id: "c2", titulo: "Actualizar registros", campo: "comunes2", clase: "" },
-  { id: "p1", titulo: "Gestiones primera prioridad", campo: "prioridad1", clase: "rojo-pastel" },
-  { id: "p2", titulo: "Gestiones segunda prioridad", campo: "prioridad2", clase: "naranjo-pastel" },
-  { id: "p3", titulo: "Gestiones tercera prioridad", campo: "prioridad3", clase: "amarillo-pastel", extra: ["Emails, reuniones y otros"] },
-];
+// ================== Crear columna y tareas ==================
+function crearColumnaDOM(colDef){
+  const {id,titulo,clase} = colDef;
+  const div=document.createElement("div");
+  div.className="caja";
+  div.dataset.colId=id;
 
-function buildTareasEsperadas(fechaStr) {
-  const [anio, mes, diaN] = fechaStr.split("-").map(Number);
-  const fecha = new Date(anio, mes - 1, diaN);
-  const nombreDia = diasSemana[fecha.getDay()];
-  const base = tareasPorDia[nombreDia];
-  if (!base) return [];
-
-  const edits = edicionesGuardadas[fechaStr] || { titulos: {}, tareas: {} };
-  const out = [];
-
-  columnasDef.forEach(col => {
-    const listaBase = (base[col.campo] || []).slice();
-    if (col.extra && Array.isArray(col.extra)) listaBase.push(...col.extra);
-
-    listaBase.forEach((original, index) => {
-      const key = `${col.id}-${index}`;
-      const name = edits.tareas && edits.tareas[key] ? edits.tareas[key] : original;
-      out.push({ key, name });
-    });
-  });
-  return out;
-}
-
-// ================== Render columnas ==================
-function crearColumna(colDef, tareasBase) {
-  const { id, titulo, clase } = colDef;
-  const div = document.createElement("div");
-  div.className = "caja";
-
+  // Título editable
   const h2 = document.createElement("h2");
-  const tituloEditado = edicionesGuardadas[hoyStr].titulos[id] || titulo;
-  h2.textContent = tituloEditado;
-  h2.ondblclick = () => {
-    if (!modoEdicion) return;
-    const nuevo = prompt("Editar título:", h2.textContent);
-    if (nuevo !== null) {
-      h2.textContent = nuevo;
-      edicionesGuardadas[hoyStr].titulos[id] = nuevo;
-      guardar();
+  h2.textContent = (edicionesGuardadas[hoyStr]?.titulos?.[id])||titulo;
+  h2.ondblclick = ()=>{ if(!modoEdicion) return;
+    const nuevo=prompt("Editar título:", h2.textContent);
+    if(nuevo!==null){
+      h2.textContent=nuevo;
+      if(!edicionesGuardadas[hoyStr]) edicionesGuardadas[hoyStr]={titulos:{},tareas:{}};
+      edicionesGuardadas[hoyStr].titulos[id]=nuevo;
+      guardarTodo();
     }
   };
   div.appendChild(h2);
 
-  const lista = tareasBase.slice();
-  if (colDef.extra && Array.isArray(colDef.extra)) lista.push(...colDef.extra);
+  // Botón eliminar columna
+  const delColBtn = document.createElement("button");
+  delColBtn.textContent="Eliminar caja";
+  delColBtn.className="del-col-btn";
+  delColBtn.style.display = modoEdicion?"inline-block":"none";
+  delColBtn.onclick = ()=>{ if(!confirm(`Eliminar la caja "${h2.textContent}"?`)) return; columnasDef = columnasDef.filter(c=>c.id!==id); guardarTodo(); renderAllColumns(); actualizarGraficos(); };
+  div.appendChild(delColBtn);
 
-  lista.forEach((tareaOriginal, index) => {
-    const key = `${id}-${index}`;
-    const nombreTarea = edicionesGuardadas[hoyStr].tareas[key] || tareaOriginal;
+  // Lista tareas de hoy
+  const lista = (datosGuardados[hoyStr]||[]).filter(t=>t.caja===id);
+  lista.forEach((tareaObj)=>{
+    const contenedorTarea = document.createElement("div");
+    contenedorTarea.style.display="flex";
+    contenedorTarea.style.alignItems="center";
+    contenedorTarea.style.margin="3px 0";
 
     const boton = document.createElement("button");
-    boton.textContent = nombreTarea;
-    boton.className = `task-button ${clase}`;
+    boton.textContent = tareaObj.tarea;
+    boton.title = tareaObj.tarea;
+    boton.className=`task-button ${clase} ${tareaObj.completada?"completed":""} ${tareaObj.fueraOficina?"fuera-oficina":""}`;
+    boton.style.flex="1";
+    boton.onclick=()=>{ if(!modoEdicion){ 
+      boton.classList.toggle("completed"); 
+      tareaObj.completada = boton.classList.contains("completed"); 
+      guardarTodo(); 
+      actualizarHistorial(); 
+      actualizarGraficos(); 
+    }};
 
-    if (datosGuardados[hoyStr].some(it => (it.key && it.key === key) || it.tarea === nombreTarea)) {
-      boton.classList.add("completed");
-    }
-
-    boton.onclick = () => {
-      if (!modoEdicion) {
-        marcarTarea(boton, nombreTarea, key);
-      } else {
-        const nuevo = prompt("Editar nombre de la tarea:", boton.textContent);
-        if (nuevo !== null) {
-          boton.textContent = nuevo;
-          edicionesGuardadas[hoyStr].tareas[key] = nuevo;
-          guardar();
-        }
-      }
+    const btnEliminar = document.createElement("button");
+    btnEliminar.textContent = "❌"; btnEliminar.title = "Eliminar tarea";
+    btnEliminar.className = "btn-eliminar-tarea";
+    btnEliminar.style.marginLeft = "5px";
+    btnEliminar.style.display = modoEdicion ? "inline-block" : "none";
+    btnEliminar.onclick = () => {
+      const opcion = prompt("¿Eliminar la tarea?\n1 = solo este día\n2 = todas las semanas en este día");
+      if (opcion === "1") eliminarTarea(tareaObj, "hoy");
+      else if (opcion === "2") eliminarTarea(tareaObj, "todas");
     };
-    div.appendChild(boton);
+
+    const btnMover = document.createElement("button");
+    btnMover.textContent = "➡️"; btnMover.title = "Mover tarea a otra fecha";
+    btnMover.className = "btn-mover-tarea";
+    btnMover.style.marginLeft = "5px";
+    btnMover.style.display = modoEdicion ? "inline-block" : "none";
+
+    const inputFecha = document.createElement("input");
+    inputFecha.type = "date"; inputFecha.style.display="none"; inputFecha.style.marginLeft="5px";
+    btnMover.onclick = ()=>{ inputFecha.style.display="inline-block"; inputFecha.focus(); };
+    inputFecha.addEventListener("change", ()=>{
+      const fechaDestino = inputFecha.value;
+      if(fechaDestino){
+        if(!datosGuardados[fechaDestino]) datosGuardados[fechaDestino]=[];
+        datosGuardados[fechaDestino].push({...tareaObj});
+        eliminarTarea(tareaObj,"hoy");
+        guardarTodo();
+        renderAllColumns();
+        actualizarHistorial();
+        actualizarGraficos();
+        inputFecha.style.display="none"; inputFecha.value="";
+      }
+    });
+
+    boton.draggable=true;
+    boton.dataset.key=tareaObj.key;
+    boton.addEventListener("dragstart",(e)=>{ e.dataTransfer.setData("text/plain",tareaObj.key); });
+
+    contenedorTarea.appendChild(boton);
+    contenedorTarea.appendChild(btnEliminar);
+    contenedorTarea.appendChild(btnMover);
+    contenedorTarea.appendChild(inputFecha);
+    div.appendChild(contenedorTarea);
+  });
+
+  div.addEventListener("dragover", e=>e.preventDefault());
+  div.addEventListener("drop", e=>{
+    e.preventDefault();
+    const key = e.dataTransfer.getData("text/plain");
+    const tarea = datosGuardados[hoyStr]?.find(t=>t.key===key);
+    if(!tarea) return;
+    tarea.caja=id;
+    guardarTodo();
+    renderAllColumns();
+    actualizarGraficos();
   });
 
   // Botón agregar tarea
   const addBtn = document.createElement("button");
-  addBtn.textContent = "➕ Agregar tarea";
-  addBtn.className = "add-task-btn";
-  addBtn.style.display = modoEdicion ? "inline-block" : "none";
-  addBtn.onclick = () => {
+  addBtn.textContent="➕ Agregar tarea";
+  addBtn.className="add-task-btn";
+  addBtn.style.display = modoEdicion?"inline-block":"none";
+  addBtn.onclick = ()=>{
     const nueva = prompt("Nombre de la nueva tarea:");
-    if (nueva) {
-      const key = `${id}-${lista.length}`;
-      edicionesGuardadas[hoyStr].tareas[key] = nueva;
-      guardar();
-      location.reload();
+    if(!nueva || nueva.toLowerCase()==="inactividad") return alert("No se puede agregar tarea 'Inactividad'.");
+    const opcion = prompt("¿Cómo quieres agregar la tarea?\n1 = Solo hoy\n2 = Repetir semanalmente\n3 = Todos los días");
+    const key = `cal-${Date.now()}`;
+    if(!datosGuardados[hoyStr]) datosGuardados[hoyStr]=[];
+    datosGuardados[hoyStr].push({tarea:nueva,hora:"--:--",key,caja:id});
+
+    if(opcion==="2"){ 
+      const dia = diasSemana[new Date(hoyStr).getDay()];
+      if(!tareasPorDiaUser[dia]) tareasPorDiaUser[dia]={};
+      if(!tareasPorDiaUser[dia][id]) tareasPorDiaUser[dia][id]=[];
+      if(!tareasPorDiaUser[dia][id].includes(nueva)) tareasPorDiaUser[dia][id].push(nueva);
+    } else if(opcion==="3"){ 
+      diasSemana.forEach(dia=>{
+        if(!tareasPorDiaUser[dia]) tareasPorDiaUser[dia]={};
+        if(!tareasPorDiaUser[dia][id]) tareasPorDiaUser[dia][id]=[];
+        if(!tareasPorDiaUser[dia][id].includes(nueva)) tareasPorDiaUser[dia][id].push(nueva);
+      });
     }
+
+    guardarTodo();
+    renderAllColumns();
+    actualizarHistorial();
+    actualizarGraficos();
   };
   div.appendChild(addBtn);
 
-  contenedor.appendChild(div);
+  return div;
 }
 
-// ================== Acciones ==================
-function marcarTarea(boton, nombreTarea, key) {
-  if (!boton.classList.contains("completed")) {
-    boton.classList.add("completed");
-    const ahora = new Date();
-    const horaStr = ahora.getHours().toString().padStart(2,'0') + ":" + ahora.getMinutes().toString().padStart(2,'0');
+// ================== Render columnas ==================
+function renderAllColumns(){
+  limpiarContenedor();
+  reflowGridColumns();
+  columnasDef.forEach(col=>{
+    const cont = document.getElementById("contenedorTareas");
+    if(cont) cont.appendChild(crearColumnaDOM(col));
+  });
+  document.querySelectorAll(".add-task-btn,.del-col-btn").forEach(b => b.style.display = modoEdicion ? "inline-block" : "none");
+  document.querySelectorAll(".btn-eliminar-tarea,.btn-mover-tarea").forEach(b => b.style.display = modoEdicion ? "inline-block" : "none");
+}
 
-    if (!datosGuardados[hoyStr]) datosGuardados[hoyStr] = [];
-    datosGuardados[hoyStr].push({ tarea: nombreTarea, hora: horaStr, key });
-
-    registroHoras.push({ tarea: nombreTarea, hora: ahora });
-    localStorage.setItem("registroHoras", JSON.stringify(registroHoras));
-
-    guardar();
-    actualizarHistorial();
-    actualizarGraficoHoras();
+// ================== Eliminar tarea ==================
+function eliminarTarea(tareaObj,modo){
+  datosGuardados[hoyStr] = (datosGuardados[hoyStr]||[]).filter(t=>t.key!==tareaObj.key);
+  if(modo==="todas"){
+    const dia = diasSemana[new Date(hoyStr).getDay()];
+    if(tareasPorDiaUser[dia] && tareasPorDiaUser[dia][tareaObj.caja]){
+      tareasPorDiaUser[dia][tareaObj.caja] = tareasPorDiaUser[dia][tareaObj.caja].filter(t=>t!==tareaObj.tarea);
+    }
   }
+  guardarTodo();
+  renderAllColumns();
+  actualizarHistorial();
+  actualizarGraficos();
 }
 
-function guardar() {
-  localStorage.setItem("registroTareas", JSON.stringify(datosGuardados));
-  localStorage.setItem("ediciones", JSON.stringify(edicionesGuardadas));
-  const notas = document.getElementById("notasDia");
-  if (notas) localStorage.setItem("notasFijas", notas.value || "");
-}
-
-// ================== Historial ==================
 function actualizarHistorial() {
   const historial = document.getElementById("historial");
   if (!historial) return;
   historial.innerHTML = "";
 
-  const fechas = [];
-  let startDate = new Date("2025-08-01"); 
-  while (startDate <= hoy) {
-    const dayName = diasSemana[startDate.getDay()];
-    if (["Lunes","Martes","Miércoles","Jueves","Viernes"].includes(dayName)) {
-      const str = startDate.toISOString().split("T")[0];
-      fechas.push(str);
-      if (!datosGuardados[str]) datosGuardados[str] = [];
+  const fechas = Object.keys(datosGuardados)
+    .sort((a,b)=>new Date(b)-new Date(a))
+    .filter(f => {
+      const dia = new Date(f).getDay();
+      return dia >= 1 && dia <= 5; // lunes a viernes
+    });
+
+  fechas.forEach(fecha => {
+    const lista = datosGuardados[fecha] || [];
+    let icono = "❌"; // por defecto incompleto
+
+    if (lista.length > 0) {
+      const todasCompletas = lista.every(t => t.completada);
+      const todasFuera = lista.every(t => t.fueraOficina);
+
+      if (todasFuera) icono = "🏖️";
+      else if (todasCompletas) icono = "✅";
+      else icono = "❌";
+    } else {
+      icono = "🏖️";
     }
-    startDate.setDate(startDate.getDate() + 1);
+
+    const diaDiv = document.createElement("div");
+    diaDiv.className = "historial-dia";
+
+    const spanFecha = document.createElement("span");
+    spanFecha.textContent = fecha;
+
+    const spanIcono = document.createElement("span");
+    spanIcono.textContent = icono;
+
+    diaDiv.appendChild(spanFecha);
+    diaDiv.appendChild(spanIcono);
+
+    historial.appendChild(diaDiv);
+  });
+}
+
+// ================== Tareas automáticas ==================
+function cargarTareasDiaActual(){
+  const dia = diasSemana[hoy.getDay()];
+  if(tareasPorDiaUser[dia]){
+    Object.keys(tareasPorDiaUser[dia]).forEach(caja=>{
+      tareasPorDiaUser[dia][caja].forEach(tarea=>{
+        if(tarea.toLowerCase()!=="inactividad"){
+          const key = `auto-${Date.now()}-${Math.random().toString(36).substr(2,5)}`;
+          if(!datosGuardados[hoyStr]) datosGuardados[hoyStr] = [];
+          const existe = datosGuardados[hoyStr].some(t=>t.tarea===tarea && t.caja===caja);
+          if(!existe) datosGuardados[hoyStr].push({tarea, completada:false, caja, key});
+        }
+      });
+    });
+  }
+  guardarTodo();
+}
+
+// ================== Notas ==================
+function cargarNotas() {
+  const notasEl = document.getElementById("notasDia");
+  if (!notasEl) return;
+
+  const notasGuardadas = localStorage.getItem(KEY_NOTAS);
+  if (notasGuardadas !== null) {
+    notasEl.value = notasGuardadas;
   }
 
-  fechas.reverse().forEach(fecha => {
-    const esperadas = buildTareasEsperadas(fecha);
-    const tareasDelDia = datosGuardados[fecha] || [];
-    const completadasCount = esperadas.filter(e =>
-      tareasDelDia.some(tc => (tc.key && tc.key === e.key) || tc.tarea === e.name)
-    ).length;
-
-    const div = document.createElement("div");
-    div.className = "historial-dia";
-
-    const encabezado = document.createElement("h3");
-    encabezado.style.cursor = "pointer";
-
-    let simbolo;
-    if (tareasDelDia.length === 0 && fecha !== hoyStr) simbolo = "⚪"; 
-    else if (completadasCount === esperadas.length) simbolo = "✅";
-    else if (completadasCount === 0) simbolo = "❌";
-    else simbolo = "⚠️";
-
-    encabezado.textContent = `${simbolo} ${completadasCount}/${esperadas.length} - ${fecha}`;
-    div.appendChild(encabezado);
-
-    const contenido = document.createElement("div");
-    contenido.style.display = "none";
-    tareasDelDia.forEach(td => {
-      const p = document.createElement("p");
-      p.textContent = `${td.hora} - ${td.tarea}`;
-      contenido.appendChild(p);
-    });
-    div.appendChild(contenido);
-
-    encabezado.onclick = () => {
-      contenido.style.display = contenido.style.display === "none" ? "block" : "none";
-    };
-
-    historial.appendChild(div);
+  // Guardar cuando el usuario escribe
+  notasEl.addEventListener("input", () => {
+    localStorage.setItem(KEY_NOTAS, notasEl.value);
   });
-
-  actualizarGraficos();
 }
 
 // ================== Gráficos ==================
-function actualizarGraficos() {
-  actualizarGraficoCumplimiento();
-  actualizarGraficoHoras();
-}
+let graficoCumplimiento, graficoHoras;
+function actualizarGraficos(){
+  const ctxC = document.getElementById("graficoCumplimiento")?.getContext("2d");
+  const ctxH = document.getElementById("graficoHoras")?.getContext("2d");
+  if(!ctxC || !ctxH) return;
 
-function actualizarGraficoCumplimiento() {
-  const grafCumpl = document.getElementById("graficoSemanal");
-  if (!grafCumpl || !window.Chart) return;
-
-  const semanas = {};
-  Object.keys(datosGuardados).sort().forEach(fecha => {
-    const d = new Date(fecha);
-    const anioSemana = `${d.getFullYear()}-S${Math.ceil((d.getDate() + 6 - d.getDay()) / 7)}`;
-    if (!semanas[anioSemana]) semanas[anioSemana] = [];
-    semanas[anioSemana].push(fecha);
+  const fechas = Object.keys(datosGuardados).sort();
+  const cumplimientoData = fechas.map(f=>{
+    const total = datosGuardados[f]?.length || 0;
+    const ok = datosGuardados[f]?.filter(t=>t.completada).length || 0;
+    return total>0 ? Math.round((ok/total)*100) : 0;
   });
+  const horasData = fechas.map(f=>registroHoras.filter(r=>r.fecha===f).reduce((sum,r)=>sum+r.horas,0));
 
-  const labelsCumpl = Object.keys(semanas);
-  const dataCumpl = labelsCumpl.map(s => {
-    const fechasSemana = semanas[s];
-    let total = 0, completadas = 0;
-    fechasSemana.forEach(f => {
-      const esperadas = buildTareasEsperadas(f);
-      total += esperadas.length;
-      completadas += esperadas.filter(e =>
-        datosGuardados[f].some(tc => (tc.key && tc.key === e.key) || tc.tarea === e.name)
-      ).length;
-    });
-    return total ? (completadas / total) * 100 : 0;
+  if(graficoCumplimiento) graficoCumplimiento.destroy();
+  if(graficoHoras) graficoHoras.destroy();
+
+  graficoCumplimiento = new Chart(ctxC,{
+    type:"line",
+    data:{labels:fechas,datasets:[{label:"% Cumplimiento",data:cumplimientoData,fill:false,borderColor:"#1976d2",tension:0.3}]},
+    options:{responsive:true,plugins:{legend:{display:true}}}
   });
-
-  if (window.chartCumpl) window.chartCumpl.destroy();
-  window.chartCumpl = new Chart(grafCumpl.getContext("2d"), {
-    type: "bar",
-    data: { labels: labelsCumpl, datasets: [{ label: "% de cumplimiento", data: dataCumpl, borderWidth: 1 }] },
-    options: { scales: { y: { min: 0, max: 100, ticks: { callback: v => v + "%" } } } }
+  graficoHoras = new Chart(ctxH,{
+    type:"bar",
+    data:{labels:fechas,datasets:[{label:"Horas trabajadas",data:horasData,backgroundColor:"#1976d2"}]},
+    options:{responsive:true,plugins:{legend:{display:true}}}
   });
 }
 
-function actualizarGraficoHoras() {
-  const grafHoras = document.getElementById("graficoHoras");
-  if (!grafHoras || !window.Chart) return;
+// ================== Inicialización ==================
+document.addEventListener("DOMContentLoaded", () => {
+  // Cargar notas primero
+  cargarNotas();
 
-  const horasRango = Array.from({length: 10}, (_, i) => 8 + i).reverse(); // 17 → 8
-  const tareasUnicas = [...new Set((datosGuardados[hoyStr] || []).map(r => r.tarea))];
+  // Cargar tareas automáticas
+  cargarTareasDiaActual();
 
-  const datasets = tareasUnicas.map((tarea, idx) => {
-    return {
-      label: tarea,
-      data: horasRango.map(h => {
-        return (datosGuardados[hoyStr] || []).filter(r => {
-          const hActual = parseInt(r.hora.split(":")[0]);
-          return r.tarea === tarea && hActual === h;
-        }).length;
-      }),
-      backgroundColor: `hsl(${idx * 60}, 70%, 60%)`
-    };
-  });
-
-  if (window.chartHoras) window.chartHoras.destroy();
-  window.chartHoras = new Chart(grafHoras.getContext("2d"), {
-    type: 'bar',
-    data: { labels: horasRango.map(h => h + ":00"), datasets: datasets },
-    options: {
-      indexAxis: 'y',
-      responsive: true,
-      plugins: { title: { display: true, text: 'Hora tarea completada' }, legend: { position: 'bottom' } },
-      scales: { 
-        x: { title: { display: true, text: 'Cantidad de veces presionada' } }, 
-        y: { title: { display: true, text: 'Hora' } } 
-      }
-    }
-  });
-}
-
-// ================== Calendario ==================
-function toggleCalendario() {
-  const cont = document.getElementById("contenedorCalendario");
-  const titulo = document.getElementById("tituloCalendario");
-  const visible = cont.style.display === "block";
-  cont.style.display = visible ? "none" : "block";
-  titulo.classList.toggle("abierto", !visible);
-}
-
-function agregarTareaCalendario(fijaSemana) {
-  const fecha = document.getElementById("fechaSeleccion").value;
-  const tarea = document.getElementById("nuevaTareaCalendario").value.trim();
-  const caja = document.getElementById("selectCaja").value;
-
-  if (!fecha || !tarea || !caja) {
-    alert("Debes seleccionar fecha, tarea y caja.");
-    return;
-  }
-
-  const [anio, mes, dia] = fecha.split("-").map(Number);
-  const fechaObj = new Date(anio, mes - 1, dia);
-  const nombreDia = diasSemana[fechaObj.getDay()];
-
-  if (fijaSemana) {
-    if (!tareasPorDia[nombreDia]) tareasPorDia[nombreDia] = { prioridad1: [], prioridad2: [], prioridad3: [], comunes1: [], comunes2: [] };
-    tareasPorDia[nombreDia][caja].push(tarea);
-    alert(`✅ "${tarea}" se agregó fijo a ${nombreDia} en ${caja}`);
-  } else {
-    if (!datosGuardados[fecha]) datosGuardados[fecha] = [];
-    const key = `cal-${Date.now()}`;
-    datosGuardados[fecha].push({ tarea, hora: "--:--", key, caja });
-
-    if (fecha === hoyStr) {
-      const colDef = columnasDef.find(c => c.id === caja || c.campo === caja);
-      if (colDef) crearColumna(colDef, [tarea]);
-    }
-
-    alert(`✅ "${tarea}" se agregó solo para ${fecha} en ${caja}`);
-  }
-
-  guardar();
+  // Renderizar columnas, historial y gráficos
+  renderAllColumns();
   actualizarHistorial();
-  document.getElementById("nuevaTareaCalendario").value = "";
-}
-
-// ================== Render inicial ==================
-const baseHoy = tareasPorDia[diaNombre] || { prioridad1: [], prioridad2: [], prioridad3: [], comunes1: [], comunes2: [] };
-columnasDef.forEach(col => crearColumna(col, baseHoy[col.campo] || []));
-
-// Notas persistentes
-const notas = document.getElementById("notasDia");
-if (notas) {
-  notas.value = localStorage.getItem("notasFijas") || "";
-  notas.addEventListener("input", () => guardar());
-}
-
-actualizarHistorial();
+  actualizarGraficos();
+});
