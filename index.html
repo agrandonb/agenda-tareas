@@ -1,67 +1,38 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Registro de Tareas Diario</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Registro de Tareas Diario - Dashboard</title>
   <link rel="stylesheet" href="estilos.css">
   <style>
-    /* Contenedor de gráficos lado a lado */
-    .graficos-container {
-      display: flex;
-      gap: 20px;
-      flex-wrap: wrap;
-      margin-top: 30px;
+    /* Ajustes de transición para mostrar/ocultar contenedores */
+    #historial, #contenedorCalendario, #contenedorGraficos, #panelConfigGraficos {
+      display: none;
+      opacity: 0;
+      transform: translateY(-10px);
+      transition: all 0.3s ease;
     }
-    .graficos-container canvas {
-      flex: 1 1 400px;
-      max-width: 100%;
+    #historial.show, #contenedorCalendario.show, #contenedorGraficos.show, #panelConfigGraficos.show {
+      display: block;
+      opacity: 1;
+      transform: translateY(0);
     }
-
-    /* Estilo título historial con cursor y flecha */
-    .titulo-historial {
-      cursor: pointer;
-      user-select: none;
-    }
-    .titulo-historial::before {
-      content: "▶ ";
-      transition: transform 0.2s ease;
-    }
-    .titulo-historial.abierto::before {
-      content: "▼ ";
-    }
+    .completed { text-decoration: line-through; opacity:0.7; }
+    .rojo-pastel { background-color:#F8D7DA; }
+    .naranjo-pastel { background-color:#FFE5B4; }
+    .amarillo-pastel { background-color:#FFF9C4; }
+    #contenedorTareas { display:grid; gap:10px; margin-top:10px; }
+    .caja { padding:10px; border-radius:6px; background:#f5f5f5; box-shadow:0 1px 3px rgba(0,0,0,0.1); }
+    .caja h2 { margin-top:0; cursor:pointer; }
+    canvas { display:block; margin:0 auto; height:300px; }
   </style>
 </head>
 <body>
   <h1>Registro de Tareas Diario</h1>
-
-  <!-- Día y fecha -->
   <div class="dia-semana" id="diaSemana"></div>
-
-  <!-- Contenedor de tareas -->
+  <div id="botonEditarContainer"></div>
   <div class="contenedor" id="contenedorTareas"></div>
-
-  <h2 class="titulo-calendario" id="tituloCalendario" onclick="toggleCalendario()">📅 Calendario</h2>
-<div id="contenedorCalendario" style="display:none; margin:15px 0; padding:15px; background:#fff; border-radius:10px; box-shadow:0 2px 6px rgba(0,0,0,0.1);">
-  <label for="fechaSeleccion">Selecciona una fecha:</label>
-  <input type="date" id="fechaSeleccion">
-
-  <label for="selectCaja">Selecciona caja:</label>
-  <select id="selectCaja">
-    <option value="p1">Gestiones primera prioridad</option>
-    <option value="p2">Gestiones segunda prioridad</option>
-    <option value="p3">Gestiones tercera prioridad</option>
-    <option value="c1">Búsqueda bases</option>
-    <option value="c2">Actualizar registros</option>
-  </select>
-
-  <input type="text" id="nuevaTareaCalendario" placeholder="Escribe nueva tarea...">
-
-  <div style="margin-top:10px;">
-    <button onclick="agregarTareaCalendario(false)">➕ Solo este día</button>
-    <button onclick="agregarTareaCalendario(true)">📌 Fijo este día de la semana</button>
-  </div>
-</div>
 
   <!-- Caja de notas -->
   <div class="caja-notas">
@@ -75,40 +46,98 @@
     <button onclick="limpiarAntiguos()">Limpiar Registros Antiguos</button>
   </div>
 
-  <!-- Historial plegable -->
+  <!-- Calendario -->
+  <h2 class="titulo-calendario" id="tituloCalendario" onclick="toggleCalendario()">📅 Calendario</h2>
+  <div id="contenedorCalendario">
+    <label for="fechaSeleccion">Selecciona una fecha:</label>
+    <input type="date" id="fechaSeleccion">
+    <label for="selectCaja">Selecciona caja:</label>
+    <select id="selectCaja"></select>
+    <label for="nuevaTareaCalendario">Nueva tarea:</label>
+    <input type="text" id="nuevaTareaCalendario" placeholder="Escribe nueva tarea...">
+    <div>
+      <button id="btnAddFecha">➕ Solo este día</button>
+      <button id="btnAddFija">📌 Fijo este día de la semana</button>
+      <button id="btnAddTodosDias">📅 Todos los días</button>
+    </div>
+  </div>
+
+  <!-- Historial -->
   <h2 class="titulo-historial" id="tituloHistorial" onclick="toggleHistorial()">Historial</h2>
-  <div class="historial-container" id="historial" style="display:none;"></div>
+  <div class="historial-container" id="historial"></div>
 
-  <!-- Filtros de historial -->
-  <div id="filtrosHistorial" style="margin-top:10px; display:none;">
-    <button onclick="actualizarHistorial('7d')">Últimos 7 días</button>
-    <button onclick="actualizarHistorial('mes')">Mes actual</button>
-    <button onclick="actualizarHistorial('todo')">Todo</button>
+  <!-- Gráficos -->
+  <h2 class="titulo-graficos" id="tituloGraficos" onclick="toggleGraficos()">📊 Gráficos</h2>
+  <button id="btnConfigGraficos" onclick="toggleConfigGraficos()">⚙️ Configuración de Gráficos</button>
+
+  <div id="panelConfigGraficos">
+    <label for="rangoGraficoCumplimiento">Rango gráfico Cumplimiento:</label>
+    <select id="rangoGraficoCumplimiento">
+      <option value="7d">Últimos 7 días</option>
+      <option value="mes">Mes actual</option>
+      <option value="anio">Año actual</option>
+      <option value="todo">Todo</option>
+    </select>
+
+    <label for="rangoGraficoHoras" style="margin-left:10px;">Rango gráfico Horas:</label>
+    <select id="rangoGraficoHoras">
+      <option value="7d">Últimos 7 días</option>
+      <option value="mes">Mes actual</option>
+      <option value="anio">Año actual</option>
+      <option value="todo">Todo</option>
+    </select>
   </div>
 
-  <!-- Contenedor de gráficos lado a lado -->
-  <div class="graficos-container">
-    <canvas id="graficoSemanal" width="400" height="200"></canvas>
-    <canvas id="graficoHoras" width="400" height="200"></canvas>
+  <div id="contenedorGraficos">
+    <div class="graficos-container" style="display:flex; gap:20px; flex-wrap:wrap;">
+      <canvas id="graficoCumplimiento"></canvas>
+      <canvas id="graficoHoras"></canvas>
+    </div>
   </div>
 
-  <!-- Chart.js -->
+  <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- Script principal -->
   <script src="script.js"></script>
-
-  <!-- Función para desplegar/plegar historial -->
   <script>
-    function toggleHistorial() {
-      const historialContainer = document.getElementById("historial");
-      const filtros = document.getElementById("filtrosHistorial");
-      const titulo = document.getElementById("tituloHistorial");
-      const visible = historialContainer.style.display === "block";
-
-      historialContainer.style.display = visible ? "none" : "block";
-      filtros.style.display = visible ? "none" : "block";
+    // Toggle gráficos y configuración
+    function toggleGraficos() {
+      const cont = document.getElementById("contenedorGraficos");
+      const titulo = document.getElementById("tituloGraficos");
+      const visible = cont.classList.contains("show");
+      cont.classList.toggle("show", !visible);
       titulo.classList.toggle("abierto", !visible);
+      if (!visible) actualizarGraficos();
     }
+
+    function toggleConfigGraficos() {
+      const panel = document.getElementById("panelConfigGraficos");
+      panel.classList.toggle("show");
+    }
+
+    function toggleHistorial() { document.getElementById("historial").classList.toggle("show"); }
+    function toggleCalendario() { document.getElementById("contenedorCalendario").classList.toggle("show"); }
+
+    // Botón “Todos los días” del calendario
+    document.addEventListener("DOMContentLoaded", () => {
+      const btnTodos = document.getElementById("btnAddTodosDias");
+      btnTodos?.addEventListener("click", () => {
+        const fecha = document.getElementById("fechaSeleccion").value;
+        const tarea = document.getElementById("nuevaTareaCalendario").value.trim();
+        const caja = document.getElementById("selectCaja").value;
+        if (!tarea || !caja) return alert("Debes seleccionar tarea y caja.");
+        ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"].forEach(dia=>{
+          if (!tareasPorDiaUser[dia]) tareasPorDiaUser[dia]={};
+          if (!tareasPorDiaUser[dia][caja]) tareasPorDiaUser[dia][caja]=[];
+          if (!tareasPorDiaUser[dia][caja].includes(tarea)) tareasPorDiaUser[dia][caja].push(tarea);
+        });
+        guardarTodo();
+        renderAllColumns();
+        actualizarHistorial();
+        actualizarGraficos();
+        alert(`✅ "${tarea}" se agregó todos los días`);
+        document.getElementById("nuevaTareaCalendario").value="";
+      });
+    });
   </script>
 </body>
 </html>
