@@ -7,13 +7,19 @@
   --color-primario: #1976d2;
   --color-verde: #c8e6c9;
   --color-verde-texto: #2e7d32;
-  --rojo-pastel: #fdecea;
-  --naranjo-pastel: #fff4e5;
-  --amarillo-pastel: #fffde7;
+  --rojo-pastel: #fbeaea;
+  --naranjo-pastel: #fff4e6;
+  --amarillo-pastel: #fffce6;
   --gris-claro: #f0f0f0;
   --gris-hover: #e0e0e0;
+  --color-blanco: #ffffff;
+  --color-borde: #ddd;
+  --color-borde-hover: #bbb;
+  --color-hover-card: #fafafa;
+  --color-caja: #fcfcfc;
 }
 
+/* Reset y body */
 body {
   font-family: 'Inter', sans-serif;
   padding: 20px;
@@ -23,17 +29,18 @@ body {
 }
 
 h1 {
-  font-size: 2.2em;
+  font-size: 1.7em;
   margin-bottom: 15px;
   font-weight: 600;
 }
 
 .dia-semana {
-  font-size: 1.5em;
+  font-size: 0.9em;
   margin: 10px 0;
   font-weight: 600;
 }
 
+/* Contenedor de columnas */
 .contenedor {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
@@ -41,22 +48,36 @@ h1 {
   margin-bottom: 20px;
 }
 
+/* Tarjetas de tareas */
 .caja {
-  background-color: #fff;
+  background-color: var(--color-caja);
   border-radius: 12px;
   padding: 15px;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.05);
-  transition: transform 0.2s, box-shadow 0.2s;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s, box-shadow 0.2s, background-color 0.2s;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
 }
 .caja:hover {
-  transform: translateY(-2px);
+  transform: translateY(-3px);
   box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+  background-color: #f9f9f9;
 }
-
 .caja h2 {
-  font-size: 1.2em;
+  font-size: 1.1em;
   margin-bottom: 10px;
   font-weight: 600;
+  cursor: pointer;
+}
+
+/* Animación pop para nuevas cajas y tareas */
+.caja.pop, .task-button.pop {
+  animation: popAnim 0.35s ease forwards;
+}
+@keyframes popAnim {
+  0% { transform: scale(0.95); opacity: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+  50% { transform: scale(1.05); opacity: 1; box-shadow: 0 10px 20px rgba(0,0,0,0.15); }
+  100% { transform: scale(1); opacity: 1; box-shadow: 0 4px 12px rgba(0,0,0,0.10); }
 }
 
 /* Botones de tareas */
@@ -67,26 +88,37 @@ h1 {
   padding: 12px;
   border: none;
   border-radius: 8px;
-  background-color: #e0e0e0;
+  background-color: #e8e8e8;
+  color: #333;
   cursor: pointer;
   font-weight: 600;
-  transition: background-color 0.3s, transform 0.2s;
+  transition: background-color 0.3s, transform 0.2s, box-shadow 0.2s;
 }
 .task-button:hover {
-  background-color: #d5d5d5;
-  transform: scale(1.03);
+  background-color: #dcdcdc;
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
-.completed {
+.task-button.completed {
   background-color: var(--color-verde) !important;
   color: var(--color-verde-texto);
 }
+.task-button.completed::after {
+  content: " ✅";
+  font-size: 0.9em;
+  margin-left: 5px;
+}
+.task-button.fuera-oficina {
+  background-color: #ffe0b2;
+  color: #6d4c41;
+}
 
-/* Colores pastel */
-.rojo-pastel { background-color: var(--rojo-pastel); }
-.naranjo-pastel { background-color: var(--naranjo-pastel); }
-.amarillo-pastel { background-color: var(--amarillo-pastel); }
+/* Colores pastel para prioridades */
+.rojo-pastel { background-color: var(--rojo-pastel); color: #333; }
+.naranjo-pastel { background-color: var(--naranjo-pastel); color: #333; }
+.amarillo-pastel { background-color: var(--amarillo-pastel); color: #333; }
 
-/* Botón agregar tarea solo en modo edición */
+/* Botón agregar tarea */
 .add-task-btn {
   margin-top: 10px;
   padding: 10px 12px;
@@ -101,6 +133,33 @@ h1 {
 .add-task-btn:hover {
   background-color: #125a9c;
   transform: scale(1.05);
+}
+
+/* Botones de mover tarea */
+.btn-mover-tarea {
+  margin-left: 5px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background-color: var(--color-primario);
+  color: white;
+  border: none;
+  cursor: pointer;
+  display: none;
+  font-size: 0.9rem;
+  transition: background 0.3s, transform 0.2s;
+}
+.btn-mover-tarea:hover {
+  background-color: #125a9c;
+  transform: scale(1.05);
+}
+
+/* Inputs de fecha en columnas */
+.caja input[type="date"] {
+  margin-left: 5px;
+  padding: 5px 8px;
+  border-radius: 5px;
+  border: 1px solid var(--color-borde);
+  display: none;
 }
 
 /* Botones de opciones */
@@ -124,98 +183,103 @@ h1 {
 
 /* Historial */
 .historial-container {
-  margin-top: 30px;
+  display: flex;
+  flex-direction: column; /* vertical */
+  gap: 8px;               /* separación entre días */
 }
+
 .historial-dia {
-  margin-bottom: 15px;
-  background-color: #ffffff;
-  padding: 12px;
-  border-radius: 8px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-  font-size: 0.85rem;
-  transition: transform 0.2s;
+  display: flex;           /* fila solo para fecha + icono */
+  align-items: center;
+  gap: 6px;                /* espacio entre fecha e icono */
 }
-.historial-dia:hover { transform: translateX(2px); }
 
-.historial-dia h3 {
-  margin: 0;
-  padding: 10px;
-  background-color: var(--gris-claro);
-  cursor: pointer;
-  border-radius: 6px;
-  transition: background-color 0.2s;
+.historial-dia span {
+  font-size: 1.1em; /* ícono */
 }
-.historial-dia h3:hover { background-color: var(--gris-hover); }
-
-.historial-dia div {
-  margin-top: 5px;
-  padding-left: 15px;
-  display: none;
-}
-.historial-dia div p {
-  margin: 3px 0;
-}
+.historial-tarea.ok::before { content: "✅ "; }
+.historial-tarea.incompleto::before { content: "❌ "; }
+.historial-tarea.fuera::before { content: "🏖️ "; }
 
 /* Caja de notas */
 .caja-notas {
   grid-column: span 5;
-  background-color: #ffffff;
-  border: 1px solid #ddd;
+  background-color: var(--color-blanco);
+  border: 1px solid var(--color-borde);
   border-radius: 10px;
   padding: 15px;
   margin-top: 20px;
+  transition: background-color 0.2s;
 }
+.caja-notas:hover { background-color: var(--color-hover-card); }
 .caja-notas textarea {
   width: 100%;
   height: 100px;
   font-size: 14px;
-  border: none;
+  border: 1px solid var(--color-borde);
+  border-radius: 6px;
   outline: none;
   resize: vertical;
   font-family: inherit;
+  transition: border 0.2s, box-shadow 0.2s;
+}
+.caja-notas textarea:focus {
+  border: 1px solid var(--color-primario);
+  box-shadow: 0 0 4px rgba(25, 118, 210, 0.3);
 }
 
-/* Contenedor de gráficos lado a lado */
+/* Contenedor de gráficos */
 .graficos-container {
   display: flex;
+  flex-direction: column;
   gap: 20px;
-  flex-wrap: wrap;
-  margin-top: 30px;
-  justify-content: space-between;
+  margin-top: 10px;
 }
 .graficos-container canvas {
-  flex: 1 1 45%;   /* cada gráfico ocupa aproximadamente la mitad */
-  max-width: 45%;  /* evita que se expandan demasiado */
-  height: 200px;   /* altura fija */
-  background-color: #ffffff;
+  width: 100%;
+  aspect-ratio: 2 / 1;
+  background-color: var(--color-blanco);
   padding: 10px;
   border-radius: 10px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
 }
 
-/* Calendario plegable */
-.titulo-calendario {
+/* Títulos plegables */
+.titulo-calendario, .titulo-historial, .titulo-graficos {
   cursor: pointer;
   user-select: none;
   margin-top: 20px;
   font-weight: 600;
 }
-.titulo-calendario::before {
+.titulo-calendario::before, .titulo-historial::before, .titulo-graficos::before {
   content: "▶ ";
   transition: transform 0.2s ease;
 }
-.titulo-calendario.abierto::before {
+.titulo-calendario.abierto::before, .titulo-historial.abierto::before, .titulo-graficos.abierto::before {
   content: "▼ ";
 }
-.calendario-container {
+
+/* Mostrar/ocultar contenedores */
+#historial, #contenedorCalendario, #contenedorGraficos, #panelConfigGraficos {
   display: none;
-  margin-top: 10px;
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: all 0.3s ease;
+}
+#historial.show, #contenedorCalendario.show, #contenedorGraficos.show, #panelConfigGraficos.show {
+  display: block;
+  opacity: 1;
+  transform: translateY(0);
 }
 
 /* Responsive */
-@media (max-width: 900px) {
-  .contenedor { grid-template-columns: 1fr; gap: 15px; }
-  .graficos-container { flex-direction: column; }
+@media (max-width: 1200px) { .contenedor { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 900px) { 
+  .contenedor { grid-template-columns: 1fr; }
+  .graficos-container canvas { aspect-ratio: 1.5 / 1; }
   .historial-dia { font-size: 0.85rem; }
   .task-button { padding: 12px; font-size: 0.9rem; }
+}
+@media (max-width: 600px) {
+  .caja-notas textarea { min-height: 150px; }
 }
