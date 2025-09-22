@@ -3,7 +3,7 @@
 
 :root {
   --color-texto: #333;
-  --color-fondo: #f5f7fa;
+  --color-fondo: #f9f9fb;
   --color-primario: #1976d2;
   --color-verde: #c8e6c9;
   --color-verde-texto: #2e7d32;
@@ -29,14 +29,15 @@ body {
 }
 
 h1 {
-  font-size: 1.7em;
-  margin-bottom: 15px;
+  font-size: 1.8em;
+  margin-bottom: 20px;
   font-weight: 600;
+  color: var(--color-primario);
 }
 
 .dia-semana {
-  font-size: 0.9em;
-  margin: 10px 0;
+  font-size: 1em;
+  margin: 10px 0 20px;
   font-weight: 600;
 }
 
@@ -56,15 +57,15 @@ h1 {
   display: flex;
   flex-direction: column;
   transition: transform 0.2s, box-shadow 0.2s, background-color 0.2s;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 }
 .caja:hover {
   transform: translateY(-3px);
-  box-shadow: 0 8px 16px rgba(0,0,0,0.1);
-  background-color: #f9f9f9;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.12);
+  background-color: var(--color-hover-card);
 }
 .caja h2 {
-  font-size: 1.1em;
+  font-size: 1.15em;
   margin-bottom: 10px;
   font-weight: 600;
   cursor: pointer;
@@ -75,9 +76,9 @@ h1 {
   animation: popAnim 0.35s ease forwards;
 }
 @keyframes popAnim {
-  0% { transform: scale(0.95); opacity: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-  50% { transform: scale(1.05); opacity: 1; box-shadow: 0 10px 20px rgba(0,0,0,0.15); }
-  100% { transform: scale(1); opacity: 1; box-shadow: 0 4px 12px rgba(0,0,0,0.10); }
+  0% { transform: scale(0.95); opacity: 0; }
+  50% { transform: scale(1.05); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
 }
 
 /* Botones de tareas */
@@ -103,15 +104,8 @@ h1 {
   background-color: var(--color-verde) !important;
   color: var(--color-verde-texto);
 }
-.task-button.completed::after {
-  content: " ✅";
-  font-size: 0.9em;
-  margin-left: 5px;
-}
-.task-button.fuera-oficina {
-  background-color: #ffe0b2;
-  color: #6d4c41;
-}
+.task-button.completed::after { content: " ✅"; font-size: 0.9em; margin-left: 5px; }
+.task-button.fuera-oficina { background-color: #ffe0b2; color: #6d4c41; }
 
 /* Colores pastel para prioridades */
 .rojo-pastel { background-color: var(--rojo-pastel); color: #333; }
@@ -122,7 +116,7 @@ h1 {
 .add-task-btn {
   margin-top: 10px;
   padding: 10px 12px;
-  border-radius: 6px;
+  border-radius: 8px;
   background-color: var(--color-primario);
   color: white;
   border: none;
@@ -130,10 +124,7 @@ h1 {
   display: none;
   transition: background 0.3s, transform 0.2s;
 }
-.add-task-btn:hover {
-  background-color: #125a9c;
-  transform: scale(1.05);
-}
+.add-task-btn:hover { background-color: #125a9c; transform: scale(1.05); }
 
 /* Botones de mover tarea */
 .btn-mover-tarea {
@@ -148,55 +139,52 @@ h1 {
   font-size: 0.9rem;
   transition: background 0.3s, transform 0.2s;
 }
-.btn-mover-tarea:hover {
-  background-color: #125a9c;
-  transform: scale(1.05);
-}
+.btn-mover-tarea:hover { background-color: #125a9c; transform: scale(1.05); }
 
 /* Inputs de fecha en columnas */
 .caja input[type="date"] {
   margin-left: 5px;
-  padding: 5px 8px;
-  border-radius: 5px;
+  padding: 6px 10px;
+  border-radius: 6px;
   border: 1px solid var(--color-borde);
-  display: none;
+  display: none; /* oculto por defecto */
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.caja input[type="date"].visible {
+  display: inline-block;
+  background-color: var(--color-blanco);
 }
 
 /* Botones de opciones */
 .botones-opciones {
   margin: 20px 0;
+  display: flex;
+  gap: 10px;
 }
 .botones-opciones button {
-  margin-right: 10px;
   padding: 10px 15px;
   background: var(--color-primario);
   color: white;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
-  transition: background 0.3s, transform 0.2s;
+  transition: background 0.3s, transform 0.2s, box-shadow 0.2s;
 }
 .botones-opciones button:hover {
   background: #125a9c;
-  transform: scale(1.05);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.12);
 }
 
 /* Historial */
 .historial-container {
   display: flex;
-  flex-direction: column; /* vertical */
-  gap: 8px;               /* separación entre días */
+  flex-direction: column;
+  gap: 8px;
 }
-
-.historial-dia {
-  display: flex;           /* fila solo para fecha + icono */
-  align-items: center;
-  gap: 6px;                /* espacio entre fecha e icono */
-}
-
-.historial-dia span {
-  font-size: 1.1em; /* ícono */
-}
+.historial-dia { display: flex; align-items: center; gap: 6px; }
+.historial-dia span { font-size: 1.1em; }
 .historial-tarea.ok::before { content: "✅ "; }
 .historial-tarea.incompleto::before { content: "❌ "; }
 .historial-tarea.fuera::before { content: "🏖️ "; }
@@ -206,26 +194,30 @@ h1 {
   grid-column: span 5;
   background-color: var(--color-blanco);
   border: 1px solid var(--color-borde);
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 15px;
   margin-top: 20px;
-  transition: background-color 0.2s;
+  transition: background-color 0.2s, box-shadow 0.2s;
 }
-.caja-notas:hover { background-color: var(--color-hover-card); }
+.caja-notas:hover {
+  background-color: var(--color-hover-card);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
 .caja-notas textarea {
   width: 100%;
   height: 100px;
   font-size: 14px;
   border: 1px solid var(--color-borde);
-  border-radius: 6px;
+  border-radius: 8px;
   outline: none;
   resize: vertical;
   font-family: inherit;
+  padding: 8px;
   transition: border 0.2s, box-shadow 0.2s;
 }
 .caja-notas textarea:focus {
   border: 1px solid var(--color-primario);
-  box-shadow: 0 0 4px rgba(25, 118, 210, 0.3);
+  box-shadow: 0 0 6px rgba(25,118,210,0.3);
 }
 
 /* Contenedor de gráficos */
@@ -240,8 +232,8 @@ h1 {
   aspect-ratio: 2 / 1;
   background-color: var(--color-blanco);
   padding: 10px;
-  border-radius: 10px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 }
 
 /* Títulos plegables */
@@ -250,24 +242,28 @@ h1 {
   user-select: none;
   margin-top: 20px;
   font-weight: 600;
+  padding: 5px 0;
+  color: var(--color-primario);
 }
 .titulo-calendario::before, .titulo-historial::before, .titulo-graficos::before {
   content: "▶ ";
+  color: var(--color-primario);
   transition: transform 0.2s ease;
 }
 .titulo-calendario.abierto::before, .titulo-historial.abierto::before, .titulo-graficos.abierto::before {
   content: "▼ ";
 }
 
-/* Mostrar/ocultar contenedores */
+/* Mostrar/ocultar contenedores plegables suavemente */
 #historial, #contenedorCalendario, #contenedorGraficos, #panelConfigGraficos {
-  display: none;
+  max-height: 0;
   opacity: 0;
+  overflow: hidden;
+  transition: max-height 0.4s ease, opacity 0.3s ease, transform 0.3s ease;
   transform: translateY(-10px);
-  transition: all 0.3s ease;
 }
 #historial.show, #contenedorCalendario.show, #contenedorGraficos.show, #panelConfigGraficos.show {
-  display: block;
+  max-height: 2000px; /* suficientemente grande para contenido */
   opacity: 1;
   transform: translateY(0);
 }
