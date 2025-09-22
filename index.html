@@ -6,7 +6,7 @@
   <title>Registro de Tareas Diario - Dashboard</title>
   <link rel="stylesheet" href="estilos.css">
   <style>
-    /* Ajustes de transición para mostrar/ocultar contenedores */
+    /* Transiciones y visibilidad */
     #historial, #contenedorCalendario, #contenedorGraficos, #panelConfigGraficos {
       display: none;
       opacity: 0;
@@ -18,14 +18,90 @@
       opacity: 1;
       transform: translateY(0);
     }
-    .completed { text-decoration: line-through; opacity:0.7; }
+
+    body {
+      font-family: 'Arial', sans-serif;
+      background-color: #f0f2f5;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h1 { color: #333; text-align: center; }
+    .dia-semana { text-align:center; font-weight: bold; margin: 10px 0; }
+
+    /* Contenedores de tareas */
+    #contenedorTareas {
+      display: grid;
+      gap: 12px;
+      margin-top: 15px;
+    }
+    .caja {
+      padding: 15px;
+      border-radius: 10px;
+      background: #ffffff;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+      transition: transform 0.2s ease;
+    }
+    .caja:hover { transform: translateY(-3px); }
+    .caja h2 { margin-top: 0; cursor: pointer; color: #1976d2; }
+
+    /* Notas */
+    .caja-notas textarea {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      resize: vertical;
+      min-height: 80px;
+      font-size: 14px;
+    }
+
+    /* Botones */
+    button {
+      background-color: #1976d2;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 14px;
+      margin: 4px;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+    button:hover { background-color: #115293; }
+
+    .botones-opciones { text-align: center; margin: 15px 0; }
+
+    /* Títulos plegables */
+    .titulo-calendario, .titulo-historial, .titulo-graficos {
+      cursor: pointer;
+      background-color: #e3f2fd;
+      padding: 10px;
+      border-radius: 6px;
+      margin: 10px 0;
+      user-select: none;
+      transition: background 0.2s;
+    }
+    .titulo-calendario.abierto, .titulo-historial.abierto, .titulo-graficos.abierto {
+      background-color: #bbdefb;
+    }
+
+    /* Colores pastel */
     .rojo-pastel { background-color:#F8D7DA; }
     .naranjo-pastel { background-color:#FFE5B4; }
     .amarillo-pastel { background-color:#FFF9C4; }
-    #contenedorTareas { display:grid; gap:10px; margin-top:10px; }
-    .caja { padding:10px; border-radius:6px; background:#f5f5f5; box-shadow:0 1px 3px rgba(0,0,0,0.1); }
-    .caja h2 { margin-top:0; cursor:pointer; }
-    canvas { display:block; margin:0 auto; height:300px; }
+
+    /* Gráficos */
+    .graficos-container {
+      display:flex;
+      gap:20px;
+      flex-wrap:wrap;
+      justify-content:center;
+      margin-top: 10px;
+    }
+    canvas { background: #fff; border-radius: 8px; box-shadow: 0 3px 6px rgba(0,0,0,0.05); }
+
+    /* Inputs y selects */
+    input, select { padding: 6px 10px; border-radius: 6px; border: 1px solid #ccc; margin: 4px 0; }
   </style>
 </head>
 <body>
@@ -35,7 +111,7 @@
   <div class="contenedor" id="contenedorTareas"></div>
 
   <!-- Caja de notas -->
-  <div class="caja-notas">
+  <div class="caja-notas caja">
     <h2>Notas:</h2>
     <textarea id="notasDia" placeholder="Escribe tus notas aquí..."></textarea>
   </div>
@@ -47,10 +123,11 @@
   </div>
 
   <!-- Calendario -->
-  <h2 class="titulo-calendario" id="tituloCalendario" onclick="toggleCalendario()">📅 Calendario</h2>
-  <div id="contenedorCalendario">
+  <h2 class="titulo-calendario" id="tituloCalendario" onclick="toggleElemento('tituloCalendario','contenedorCalendario')">📅 Calendario</h2>
+  <div id="contenedorCalendario" class="caja">
     <label for="fechaSeleccion">Selecciona una fecha:</label>
     <input type="date" id="fechaSeleccion">
+    <button id="btnSeleccionarFecha">🗓️ Ir a fecha</button>
     <label for="selectCaja">Selecciona caja:</label>
     <select id="selectCaja"></select>
     <label for="nuevaTareaCalendario">Nueva tarea:</label>
@@ -63,33 +140,49 @@
   </div>
 
   <!-- Historial -->
-  <h2 class="titulo-historial" id="tituloHistorial" onclick="toggleHistorial()">Historial</h2>
-  <div class="historial-container" id="historial"></div>
+  <h2 class="titulo-historial" id="tituloHistorial" onclick="toggleElemento('tituloHistorial','historial')">Historial</h2>
+  <div class="historial-container caja" id="historial"></div>
 
   <!-- Gráficos -->
-  <h2 class="titulo-graficos" id="tituloGraficos" onclick="toggleGraficos()">📊 Gráficos</h2>
+  <h2 class="titulo-graficos" id="tituloGraficos" onclick="toggleElemento('tituloGraficos','contenedorGraficos')">📊 Gráficos</h2>
   <button id="btnConfigGraficos" onclick="toggleConfigGraficos()">⚙️ Configuración de Gráficos</button>
 
-  <div id="panelConfigGraficos">
+  <div id="panelConfigGraficos" class="caja">
+    <!-- Rango gráfico Cumplimiento -->
     <label for="rangoGraficoCumplimiento">Rango gráfico Cumplimiento:</label>
-    <select id="rangoGraficoCumplimiento">
+    <select id="rangoGraficoCumplimiento" onchange="actualizarGraficos()">
       <option value="7d">Últimos 7 días</option>
       <option value="mes">Mes actual</option>
       <option value="anio">Año actual</option>
       <option value="todo">Todo</option>
     </select>
 
+    <!-- Tipo gráfico Cumplimiento -->
+    <label for="tipoGraficoCumplimiento" style="margin-left:10px;">Tipo gráfico Cumplimiento:</label>
+    <select id="tipoGraficoCumplimiento" onchange="actualizarGraficos()">
+      <option value="line">Lineal</option>
+      <option value="bar">Barras</option>
+    </select>
+
+    <!-- Rango gráfico Horas -->
     <label for="rangoGraficoHoras" style="margin-left:10px;">Rango gráfico Horas:</label>
-    <select id="rangoGraficoHoras">
+    <select id="rangoGraficoHoras" onchange="actualizarGraficos()">
       <option value="7d">Últimos 7 días</option>
       <option value="mes">Mes actual</option>
       <option value="anio">Año actual</option>
       <option value="todo">Todo</option>
+    </select>
+
+    <!-- Tipo gráfico Horas -->
+    <label for="tipoGraficoHoras" style="margin-left:10px;">Tipo gráfico Horas:</label>
+    <select id="tipoGraficoHoras" onchange="actualizarGraficos()">
+      <option value="bar">Barras</option>
+      <option value="line">Lineal</option>
     </select>
   </div>
 
-  <div id="contenedorGraficos">
-    <div class="graficos-container" style="display:flex; gap:20px; flex-wrap:wrap;">
+  <div id="contenedorGraficos" class="caja">
+    <div class="graficos-container">
       <canvas id="graficoCumplimiento"></canvas>
       <canvas id="graficoHoras"></canvas>
     </div>
@@ -99,45 +192,18 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="script.js"></script>
   <script>
-    // Toggle gráficos y configuración
-    function toggleGraficos() {
-      const cont = document.getElementById("contenedorGraficos");
-      const titulo = document.getElementById("tituloGraficos");
+    function toggleElemento(tituloId, contenedorId) {
+      const titulo = document.getElementById(tituloId);
+      const cont = document.getElementById(contenedorId);
       const visible = cont.classList.contains("show");
       cont.classList.toggle("show", !visible);
       titulo.classList.toggle("abierto", !visible);
-      if (!visible) actualizarGraficos();
     }
 
     function toggleConfigGraficos() {
       const panel = document.getElementById("panelConfigGraficos");
       panel.classList.toggle("show");
     }
-
-    function toggleHistorial() { document.getElementById("historial").classList.toggle("show"); }
-    function toggleCalendario() { document.getElementById("contenedorCalendario").classList.toggle("show"); }
-
-    // Botón “Todos los días” del calendario
-    document.addEventListener("DOMContentLoaded", () => {
-      const btnTodos = document.getElementById("btnAddTodosDias");
-      btnTodos?.addEventListener("click", () => {
-        const fecha = document.getElementById("fechaSeleccion").value;
-        const tarea = document.getElementById("nuevaTareaCalendario").value.trim();
-        const caja = document.getElementById("selectCaja").value;
-        if (!tarea || !caja) return alert("Debes seleccionar tarea y caja.");
-        ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"].forEach(dia=>{
-          if (!tareasPorDiaUser[dia]) tareasPorDiaUser[dia]={};
-          if (!tareasPorDiaUser[dia][caja]) tareasPorDiaUser[dia][caja]=[];
-          if (!tareasPorDiaUser[dia][caja].includes(tarea)) tareasPorDiaUser[dia][caja].push(tarea);
-        });
-        guardarTodo();
-        renderAllColumns();
-        actualizarHistorial();
-        actualizarGraficos();
-        alert(`✅ "${tarea}" se agregó todos los días`);
-        document.getElementById("nuevaTareaCalendario").value="";
-      });
-    });
   </script>
 </body>
 </html>
