@@ -228,45 +228,50 @@ function eliminarTarea(tareaObj,modo){
 }
 
 function actualizarHistorial() {
-  const historial = document.getElementById("historial");
-  if (!historial) return;
-  historial.innerHTML = "";
+  const historialEl = document.getElementById("historial");
+  if (!historialEl) return;
+  historialEl.innerHTML = "";
 
-  const fechas = Object.keys(datosGuardados)
-    .sort((a,b)=>new Date(b)-new Date(a))
-    .filter(f => {
-      const dia = new Date(f).getDay();
-      return dia >= 1 && dia <= 5; // lunes a viernes
-    });
+  const registros = JSON.parse(localStorage.getItem(KEY_REGISTRO) || "{}");
+  const fechas = Object.keys(registros).sort((a, b) => new Date(b) - new Date(a));
 
-  fechas.forEach(fecha => {
-    const lista = datosGuardados[fecha] || [];
-    let icono = "❌"; // por defecto incompleto
+  const diasSemana = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
-    if (lista.length > 0) {
-      const todasCompletas = lista.every(t => t.completada);
-      const todasFuera = lista.every(t => t.fueraOficina);
+  fechas.forEach(fechaStr => {
+    const fechaObj = new Date(fechaStr);
+    const diaSemana = diasSemana[fechaObj.getDay()];
 
-      if (todasFuera) icono = "🏖️";
-      else if (todasCompletas) icono = "✅";
-      else icono = "❌";
+    // Solo lunes a viernes
+    if (diaSemana === "Sábado" || diaSemana === "Domingo") return;
+
+    const lista = registros[fechaStr] || [];
+
+    let icono;
+    if (lista.length === 0) {
+      icono = "🏖️"; // ninguna tarea registrada
     } else {
-      icono = "🏖️";
+      const completas = lista.filter(t => t.completada).length;
+      if (completas === 0) {
+        icono = "🏖️"; // ninguna tarea marcada
+      } else if (completas === lista.length) {
+        icono = "✅"; // todas completas
+      } else {
+        icono = "❌"; // incompleto
+      }
     }
 
-    const diaDiv = document.createElement("div");
-    diaDiv.className = "historial-dia";
+    // Formatear fecha en formato dd-mm-yyyy
+    const dia = String(fechaObj.getDate()).padStart(2, "0");
+    const mes = String(fechaObj.getMonth() + 1).padStart(2, "0");
+    const anio = fechaObj.getFullYear();
+    const fechaFormateada = `${diaSemana} ${dia}-${mes}-${anio}`;
 
-    const spanFecha = document.createElement("span");
-    spanFecha.textContent = fecha;
+    // Construir fila del historial
+    const divDia = document.createElement("div");
+    divDia.className = "historial-dia";
+    divDia.innerHTML = `<strong>${fechaFormateada}</strong> <span>${icono}</span>`;
 
-    const spanIcono = document.createElement("span");
-    spanIcono.textContent = icono;
-
-    diaDiv.appendChild(spanFecha);
-    diaDiv.appendChild(spanIcono);
-
-    historial.appendChild(diaDiv);
+    historialEl.appendChild(divDia);
   });
 }
 
