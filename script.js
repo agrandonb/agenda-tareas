@@ -195,19 +195,53 @@ function crearColumnaDOM(colDef, viewDate = currentViewDate){
     contenedorTarea.style.margin = "3px 0";
 
     const boton = document.createElement("button");
-    boton.textContent = tareaObj.tarea;
-    boton.title = tareaObj.tarea;
-    boton.className = `task-button ${clase} ${tareaObj.completada ? "completed" : ""} ${tareaObj.fueraOficina ? "fuera-oficina" : ""}`;
-    boton.style.flex = "1";
-    boton.onclick = ()=>{ 
-      if(!modoEdicion){ 
-        boton.classList.toggle("completed"); 
-        tareaObj.completada = boton.classList.contains("completed"); 
-        guardarTodo(); 
-        actualizarHistorial(); 
-        actualizarGraficos(); 
+boton.textContent = tareaObj.tarea;
+boton.title = tareaObj.tarea;
+boton.className = `task-button ${clase} ${tareaObj.completada ? "completed" : ""} ${tareaObj.fueraOficina ? "fuera-oficina" : ""}`;
+boton.style.flex = "1";
+
+boton.onclick = () => { 
+  if(!modoEdicion){ 
+    // Alterna completado
+    boton.classList.toggle("completed"); 
+    tareaObj.completada = boton.classList.contains("completed"); 
+    
+    // Si se completó, aplica estilo verde
+    if(tareaObj.completada){
+      boton.style.backgroundColor = "var(--color-verde)";
+      boton.style.color = "var(--color-verde-texto)";
+    } else {
+      // Devuelve al color original según la caja
+      const cajaIndex = contenedorTareas.children.namedItem(tareaObj.cajaId).dataset.index;
+      switch(Number(cajaIndex)){
+        case 0:
+        case 1:
+          boton.style.backgroundColor = "var(--gris-claro)";
+          boton.style.color = "#333";
+          break;
+        case 2:
+          boton.style.backgroundColor = "var(--rojo-pastel)";
+          boton.style.color = "#a33";
+          break;
+        case 3:
+          boton.style.backgroundColor = "var(--naranjo-pastel)";
+          boton.style.color = "#b55a2a";
+          break;
+        case 4:
+          boton.style.backgroundColor = "var(--amarillo-pastel)";
+          boton.style.color = "#aa8800";
+          break;
+        default:
+          boton.style.backgroundColor = "var(--color-secundario)";
+          boton.style.color = "#fff";
       }
-    };
+    }
+    
+    guardarTodo(); 
+    actualizarHistorial(); 
+    actualizarGraficos(); 
+  }
+};
 
     // Botón eliminar tarea (3 opciones)
     const btnEliminar = document.createElement("button");
