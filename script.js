@@ -26,10 +26,8 @@ function dateToISO(dateObj) {
 
 // ================== Función para obtener día de la semana ==================
 function obtenerDiaSemana(fechaISO) {
-  // Usamos dateFromISO para evitar desfases por zona horaria
   const fecha = dateFromISO(fechaISO);
   let day = fecha.getDay(); // 0 = Domingo, 1 = Lunes...
-  // Ajustar para que Lunes sea índice 0 en nuestro array
   if (day === 0) day = 6; // Domingo -> 6
   else day = day - 1;     // Lunes->0, Martes->1...
   return diasSemana[day];
@@ -111,7 +109,6 @@ botonEditar.onclick = () => {
       input.classList.remove('visible');
       input.value = "";
     });
-    // resetear estado del botón "Ir a fecha"
     irFechaClickState = false;
     selectedFechaTemp = null;
 
@@ -129,13 +126,11 @@ document.getElementById("botonEditarContainer")?.appendChild(botonEditar);
 
 // ================== Asegurar tareas recurrentes en una fecha ==================
 function ensureRecurrentTasksForDate(fechaISO) {
-  // Añade a datosGuardados[fechaISO] las tareas definidas en tareasPorDiaUser
   if(!fechaISO) return;
   const dia = obtenerDiaSemana(fechaISO);
   const plantilla = tareasPorDiaUser[dia] || {};
   if(!datosGuardados[fechaISO]) datosGuardados[fechaISO] = [];
 
-  // Por cada caja en la plantilla, agregar tareas que no existan ya en la fecha
   Object.keys(plantilla).forEach(cajaId => {
     const tareas = plantilla[cajaId] || [];
     tareas.forEach(nombreTarea => {
@@ -146,7 +141,6 @@ function ensureRecurrentTasksForDate(fechaISO) {
       }
     });
   });
-  // Guardamos (es idempotente: si no se añadió nada, no cambia)
   guardarTodo();
 }
 
@@ -156,6 +150,10 @@ function crearColumnaDOM(colDef, viewDate = currentViewDate){
   const div = document.createElement("div");
   div.className = "caja";
   div.dataset.colId = id;
+  // guardar índice de la caja en dataset para referencia fácil
+  const idx = columnasDef.findIndex(c => c.id === id);
+  div.dataset.index = idx;
+  div.id = `caja-${id}`;
 
   const h2 = document.createElement("h2");
   h2.textContent = (edicionesGuardadas[viewDate]?.titulos?.[id])||titulo;
@@ -171,7 +169,6 @@ function crearColumnaDOM(colDef, viewDate = currentViewDate){
   };
   div.appendChild(h2);
 
-  // Botón eliminar columna (edición)
   const delColBtn = document.createElement("button");
   delColBtn.textContent = "Eliminar caja";
   delColBtn.className = "del-col-btn";
@@ -186,7 +183,6 @@ function crearColumnaDOM(colDef, viewDate = currentViewDate){
   };
   div.appendChild(delColBtn);
 
-  // Lista de tareas para esta caja y fecha
   const lista = (datosGuardados[viewDate]||[]).filter(t => t.caja===id);
   lista.forEach((tareaObj) => {
     const contenedorTarea = document.createElement("div");
@@ -194,54 +190,20 @@ function crearColumnaDOM(colDef, viewDate = currentViewDate){
     contenedorTarea.style.alignItems = "center";
     contenedorTarea.style.margin = "3px 0";
 
-const boton = document.createElement("button");
-boton.textContent = tareaObj.tarea;
-boton.title = tareaObj.tarea;
-boton.className = `task-button ${clase} ${tareaObj.completada ? "completed" : ""} ${tareaObj.fueraOficina ? "fuera-oficina" : ""}`;
-boton.style.flex = "1";
+    const boton = document.createElement("button");
+    boton.textContent = tareaObj.tarea;
+    boton.title = tareaObj.tarea;
+    boton.className = `task-button ${clase} ${tareaObj.completada ? "completed" : ""} ${tareaObj.fueraOficina ? "fuera-oficina" : ""}`;
+    boton.style.flex = "1";
 
-// Aplicar estilo inicial según estado
-if(tareaObj.completada){
-  boton.style.backgroundColor = "var(--color-verde)";
-  boton.style.color = "var(--color-verde-texto)";
-} else {
-  const cajaIndex = Number(contenedorTareas.children.namedItem(tareaObj.cajaId).dataset.index);
-  switch(cajaIndex){
-    case 0:
-    case 1:
-      boton.style.backgroundColor = "var(--gris-claro)";
-      boton.style.color = "#333";
-      break;
-    case 2:
-      boton.style.backgroundColor = "var(--rojo-pastel)";
-      boton.style.color = "#a33";
-      break;
-    case 3:
-      boton.style.backgroundColor = "var(--naranjo-pastel)";
-      boton.style.color = "#b55a2a";
-      break;
-    case 4:
-      boton.style.backgroundColor = "var(--amarillo-pastel)";
-      boton.style.color = "#aa8800";
-      break;
-    default:
-      boton.style.backgroundColor = "var(--color-secundario)";
-      boton.style.color = "#fff";
-  }
-}
+    // Obtener índice de caja desde el div actual (seguro)
+    const cajaIndex = Number(div.dataset.index);
 
-boton.onclick = () => { 
-  if(!modoEdicion){ 
-    // Alterna completado
-    boton.classList.toggle("completed"); 
-    tareaObj.completada = boton.classList.contains("completed"); 
-
-    // Actualiza color según estado
+    // Aplicar estilo inicial según estado
     if(tareaObj.completada){
       boton.style.backgroundColor = "var(--color-verde)";
       boton.style.color = "var(--color-verde-texto)";
     } else {
-      const cajaIndex = Number(contenedorTareas.children.namedItem(tareaObj.cajaId).dataset.index);
       switch(cajaIndex){
         case 0:
         case 1:
@@ -266,11 +228,44 @@ boton.onclick = () => {
       }
     }
 
-    guardarTodo(); 
-    actualizarHistorial(); 
-    actualizarGraficos(); 
-  }
-};
+    boton.onclick = () => { 
+      if(!modoEdicion){ 
+        boton.classList.toggle("completed"); 
+        tareaObj.completada = boton.classList.contains("completed"); 
+
+        if(tareaObj.completada){
+          boton.style.backgroundColor = "var(--color-verde)";
+          boton.style.color = "var(--color-verde-texto)";
+        } else {
+          switch(cajaIndex){
+            case 0:
+            case 1:
+              boton.style.backgroundColor = "var(--gris-claro)";
+              boton.style.color = "#333";
+              break;
+            case 2:
+              boton.style.backgroundColor = "var(--rojo-pastel)";
+              boton.style.color = "#a33";
+              break;
+            case 3:
+              boton.style.backgroundColor = "var(--naranjo-pastel)";
+              boton.style.color = "#b55a2a";
+              break;
+            case 4:
+              boton.style.backgroundColor = "var(--amarillo-pastel)";
+              boton.style.color = "#aa8800";
+              break;
+            default:
+              boton.style.backgroundColor = "var(--color-secundario)";
+              boton.style.color = "#fff";
+          }
+        }
+
+        guardarTodo(); 
+        actualizarHistorial(); 
+        actualizarGraficos(); 
+      }
+    };
 
     // Botón eliminar tarea (3 opciones)
     const btnEliminar = document.createElement("button");
@@ -309,7 +304,6 @@ boton.onclick = () => {
         const nueva = {...tareaObj};
         nueva.key = `cal-${Date.now()}-${Math.random().toString(36).substr(2,5)}`;
         datosGuardados[fechaDestino].push(nueva);
-        // eliminar tarea origen (por key)
         eliminarTarea(tareaObj, "hoy", viewDate);
         guardarTodo();
         renderAllColumns(currentViewDate);
@@ -384,22 +378,20 @@ boton.onclick = () => {
 function renderAllColumns(viewDate = currentViewDate){
   currentViewDate = viewDate || currentViewDate;
 
-  // Asegurar que las tareas recurrentes estén presentes en la fecha (no duplica)
   ensureRecurrentTasksForDate(currentViewDate);
-
-  // Actualizar encabezado
   actualizarEncabezado(currentViewDate);
 
   limpiarContenedor();
   reflowGridColumns();
 
-  // Crear columnas según columnasDef
-  columnasDef.forEach(col=>{
-    const cont = document.getElementById("contenedorTareas");
-    if(cont) cont.appendChild(crearColumnaDOM(col, currentViewDate));
+  const cont = document.getElementById("contenedorTareas");
+  columnasDef.forEach((col, idx)=>{
+    const columnaDOM = crearColumnaDOM(col, currentViewDate);
+    // asegurar dataset.index correcto (por si columnasDef fue modificada)
+    columnaDOM.dataset.index = idx;
+    if(cont) cont.appendChild(columnaDOM);
   });
 
-  // Mostrar/ocultar botones según modo edición
   document.querySelectorAll(".add-task-btn,.del-col-btn").forEach(b => b.style.display = modoEdicion ? "inline-block" : "none");
   document.querySelectorAll(".btn-eliminar-tarea,.btn-mover-tarea").forEach(b => b.style.display = modoEdicion ? "inline-block" : "none");
 
@@ -413,21 +405,17 @@ function renderAllColumns(viewDate = currentViewDate){
 
 // ================== Eliminar tarea ==================
 function eliminarTarea(tareaObj,modo, fecha = currentViewDate){
-  // Eliminar únicamente por key en la fecha indicada
   if((modo === "hoy" || modo === "todos") && datosGuardados[fecha]){
     datosGuardados[fecha] = (datosGuardados[fecha]||[]).filter(t=>t.key!==tareaObj.key);
     if(datosGuardados[fecha].length === 0) delete datosGuardados[fecha];
   }
 
-  // Eliminar en todas las semanas que coincidan con el weekday del 'fecha' (opción 2)
   if(modo === "todas"){
     const diaNombre = obtenerDiaSemana(fecha);
-    // 1) quitar del template semanal (tareasPorDiaUser)
     if(tareasPorDiaUser[diaNombre] && tareasPorDiaUser[diaNombre][tareaObj.caja]){
       tareasPorDiaUser[diaNombre][tareaObj.caja] = tareasPorDiaUser[diaNombre][tareaObj.caja].filter(t => t !== tareaObj.tarea);
       if(tareasPorDiaUser[diaNombre][tareaObj.caja].length === 0) delete tareasPorDiaUser[diaNombre][tareaObj.caja];
     }
-    // 2) eliminar de datosGuardados todas las fechas cuyo weekday sea diaNombre
     Object.keys(datosGuardados).forEach(f => {
       if(obtenerDiaSemana(f) === diaNombre){
         datosGuardados[f] = datosGuardados[f].filter(t => !(t.tarea === tareaObj.tarea && t.caja === tareaObj.caja));
@@ -435,14 +423,12 @@ function eliminarTarea(tareaObj,modo, fecha = currentViewDate){
       }
     });
   } else if(modo === "todos"){
-    // remover de tareasPorDiaUser en todos los días para esa caja
     Object.keys(tareasPorDiaUser).forEach(d => {
       if(tareasPorDiaUser[d] && tareasPorDiaUser[d][tareaObj.caja]){
         tareasPorDiaUser[d][tareaObj.caja] = tareasPorDiaUser[d][tareaObj.caja].filter(t=>t!==tareaObj.tarea);
         if(tareasPorDiaUser[d][tareaObj.caja].length === 0) delete tareasPorDiaUser[d][tareaObj.caja];
       }
     });
-    // remover de datosGuardados en todas las fechas (tarea y caja)
     Object.keys(datosGuardados).forEach(f => {
       datosGuardados[f] = datosGuardados[f].filter(t => !(t.tarea === tareaObj.tarea && t.caja === tareaObj.caja));
       if(datosGuardados[f].length === 0) delete datosGuardados[f];
@@ -461,7 +447,7 @@ function actualizarHistorial() {
   if (!historialEl) return;
   historialEl.innerHTML = "";
 
-  const registros = datosGuardados; // ya sincronizado con localStorage
+  const registros = datosGuardados;
   let fechas = Object.keys(registros).sort((a,b)=>new Date(a)-new Date(b));
   let fechaInicio = fechas.length > 0 ? fechas[0] : hoyStr;
   let fechaActual = dateFromISO(hoyStr);
@@ -473,13 +459,12 @@ function actualizarHistorial() {
     const fechaISO = dateToISO(f);
     const diaSemana = obtenerDiaSemana(fechaISO);
 
-    // Solo mostrar días laborales (Lunes-Viernes)
     if(diaSemana !== "Sábado" && diaSemana !== "Domingo"){
       const lista = registros[fechaISO] || [];
 
       let claseIcono;
       if(lista.length === 0){
-        claseIcono = "fuera"; // ninguna tarea registrada
+        claseIcono = "fuera";
       } else {
         const completas = lista.filter(t => t.completada).length;
         if(completas === 0){
@@ -505,7 +490,6 @@ function actualizarHistorial() {
   }
 }
 
-
 // ================== Tareas automáticas para hoy (inicio) ==================
 function cargarTareasDiaActual(){
   const dia = obtenerDiaSemana(hoyStr);
@@ -514,7 +498,6 @@ function cargarTareasDiaActual(){
       const tareas = tareasPorDiaUser[dia][caja];
       if(!datosGuardados[hoyStr]) datosGuardados[hoyStr]=[];
       tareas.forEach(t=>{
-        // evitar duplicar: comprobamos por nombre y caja
         if(!datosGuardados[hoyStr].some(e=>e.tarea===t && e.caja===caja)){
           const key = `auto-${Date.now()}-${Math.random().toString(36).substr(2,5)}`;
           datosGuardados[hoyStr].push({tarea:t,completada:false,caja:caja,key});
@@ -543,7 +526,6 @@ function cargarNotas() {
 // ================== Bloque Gráficos Mejorado ==================
 let graficoCumplimiento, graficoHoras;
 
-// Crear gráficos
 function crearGraficos() {
   const ctxCumplimientoEl = document.getElementById('graficoCumplimiento');
   const ctxHorasEl = document.getElementById('graficoHoras');
@@ -551,6 +533,9 @@ function crearGraficos() {
 
   const ctxCumplimiento = ctxCumplimientoEl.getContext('2d');
   const ctxHoras = ctxHorasEl.getContext('2d');
+
+  if (graficoCumplimiento) try { graficoCumplimiento.destroy(); } catch(e){}
+  if (graficoHoras) try { graficoHoras.destroy(); } catch(e){}
 
   graficoCumplimiento = new Chart(ctxCumplimiento, {
     type: document.getElementById('tipoGraficoCumplimiento')?.value || 'bar',
@@ -576,7 +561,6 @@ function crearGraficos() {
   actualizarGraficos();
 }
 
-// ================== Funciones de Datos ==================
 function obtenerSemanas(fechaInicio, fechaFin) {
   const semanas = [];
   let inicio = new Date(fechaInicio);
@@ -600,9 +584,6 @@ function generarDatosReales(rango) {
   const hoy = dateFromISO(getHoyStr());
   let labels = [];
   let datos = [];
-
-  const fechasOrdenadas = Object.keys(datosGuardados)
-    .sort((a,b) => new Date(a) - new Date(b));
 
   if (rango === '7d') {
     for (let i = 6; i >= 0; i--) {
@@ -716,6 +697,7 @@ function actualizarGraficos() {
 // ================== Inicializar gráficos solo si el contenedor es visible ==================
 function mostrarGraficosSiEsVisible() {
   const cont = document.getElementById('contenedorGraficos');
+  if (!cont) return;
   if (cont.classList.contains('show')) {
     if (!graficoCumplimiento || !graficoHoras) {
       crearGraficos();
@@ -753,7 +735,6 @@ function agregarBotonVolverHoy(){
     renderAllColumns(hoyStr);
     quitarBotonVolverHoy();
   };
-  // Insertarlo antes del contenedor de tareas para mantener formato
   const cont = document.getElementById("contenedorTareas");
   if(cont && cont.parentNode) cont.parentNode.insertBefore(btn, cont);
 }
@@ -762,32 +743,26 @@ function quitarBotonVolverHoy(){
   if(b) b.remove();
 }
 
-// Estados para comportamiento del botón "Ir a fecha"
 let irFechaClickState = false;
 let selectedFechaTemp = null;
 
-// Función enlazada al botón "Ir a fecha" (primera pulsación muestra selector, segunda navega y sube)
 function irAFechaSeleccionada() {
   const fechaInput = document.getElementById("fechaSeleccion");
   if(!fechaInput) return;
   if(!irFechaClickState){
-    // primera pulsación: mostrar selector
     fechaInput.classList.add("visible");
     fechaInput.focus();
     selectedFechaTemp = fechaInput.value || null;
     irFechaClickState = true;
   } else {
-    // segunda pulsación: navegar
     const fecha = fechaInput.value || selectedFechaTemp;
     if(!fecha) return alert("Selecciona una fecha.");
     currentViewDate = fecha;
     renderAllColumns(fecha);
     actualizarHistorial();
     actualizarGraficos();
-    // Subir a las cajas (hacer scroll)
     const cont = document.getElementById("contenedorTareas");
     if(cont) cont.scrollIntoView({behavior:"smooth", block:"start"});
-    // limpiar estados y ocultar selector
     fechaInput.classList.remove("visible");
     fechaInput.value = "";
     selectedFechaTemp = null;
@@ -797,10 +772,10 @@ function irAFechaSeleccionada() {
 
 // ================== Inicialización y eventos DOM ==================
 document.addEventListener("DOMContentLoaded", () => {
-  // Cargar notas y tareas recurrentes para hoy primero
   cargarNotas();
   cargarTareasDiaActual();
   llenarSelectCaja();
+  crearGraficos(); // inicializar gráficos inicialmente (si existen canvases)
   renderAllColumns(hoyStr);
   actualizarHistorial();
   actualizarGraficos();
@@ -813,22 +788,18 @@ document.addEventListener("DOMContentLoaded", () => {
   const selectCaja = document.getElementById("selectCaja");
   const contCalendario = document.getElementById("contenedorCalendario");
   const btnSeleccionarFecha = document.getElementById("btnSeleccionarFecha");
-  const btnIrFecha = document.getElementById("btnIrFecha"); // por compatibilidad si existe
+  const btnIrFecha = document.getElementById("btnIrFecha");
 
-  // Ocultar botones no usados en el calendario (si deseas mostrarlos, quita estas líneas)
   if(btnAddFija) btnAddFija.style.display = "none";
   if(btnAddTodosDias) btnAddTodosDias.style.display = "none";
 
-  // Al cambiar la fecha en el date input: guardar selección temporal solamente
   if(fechaInput){
     fechaInput.addEventListener("change", (e)=>{
       const fecha = e.target.value;
       selectedFechaTemp = fecha || null;
-      // no navegamos ni subimos: eso ocurre al presionar el botón "Ir a fecha" por segunda vez
     });
   }
 
-  // Botón "➕ Solo este día" (agregar tarea a la fecha seleccionada desde calendario)
   if(btnAddFecha){
     btnAddFecha.addEventListener("click", ()=>{
       const fecha = fechaInput?.value;
@@ -849,7 +820,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Forzar apertura del selector de fecha al hacer click en el contenedor del calendario
   if(contCalendario && fechaInput){
     contCalendario.addEventListener("click", (e) => {
       if(e.target.tagName !== "INPUT" && e.target.tagName !== "BUTTON"){
@@ -859,7 +829,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Conectar botón del calendario (id puede ser btnSeleccionarFecha o btnIrFecha)
   if(btnSeleccionarFecha) btnSeleccionarFecha.addEventListener("click", irAFechaSeleccionada);
   if(btnIrFecha && !btnSeleccionarFecha) btnIrFecha.addEventListener("click", irAFechaSeleccionada);
 });
