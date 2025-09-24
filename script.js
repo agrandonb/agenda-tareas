@@ -1,7 +1,7 @@
 // ================== Fecha y encabezado ==================
 const diasSemana = ["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"];
 
-// Obtener fecha local en formato YYYY-MM-DD
+// Helper: obtener hoy en formato YYYY-MM-DD (fecha local)
 function getHoyStr() {
   const hoy = new Date();
   const año = hoy.getFullYear();
@@ -9,30 +9,41 @@ function getHoyStr() {
   const dia = String(hoy.getDate()).padStart(2, "0");
   return `${año}-${mes}-${dia}`;
 }
-
 const hoyStr = getHoyStr();
 let currentViewDate = hoyStr;
 
+// Helpers para evitar problemas de zona horaria
+function dateFromISO(iso) {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+function dateToISO(dateObj) {
+  const y = dateObj.getFullYear();
+  const m = String(dateObj.getMonth() + 1).padStart(2, "0");
+  const d = String(dateObj.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
 // ================== Función para obtener día de la semana ==================
 function obtenerDiaSemana(fechaISO) {
-  const fecha = new Date(fechaISO + "T00:00:00"); // aseguramos hora local
-  let day = fecha.getDay(); // 0 = Domingo, 1 = Lunes, ...
-  // Ajustar para que Lunes sea 0
-  if (day === 0) day = 6; 
-  else day = day - 1;
+  // Usamos dateFromISO para evitar desfases por zona horaria
+  const fecha = dateFromISO(fechaISO);
+  let day = fecha.getDay(); // 0 = Domingo, 1 = Lunes...
+  // Ajustar para que Lunes sea índice 0 en nuestro array
+  if (day === 0) day = 6; // Domingo -> 6
+  else day = day - 1;     // Lunes->0, Martes->1...
   return diasSemana[day];
 }
 
 // ================== Actualizar encabezado ==================
 function actualizarEncabezado(fechaISO) {
   const nombre = obtenerDiaSemana(fechaISO);
-  document.getElementById("diaSemana").textContent = `${nombre} - ${fechaISO}`;
+  const el = document.getElementById("diaSemana");
+  if (el) el.textContent = `${nombre} - ${fechaISO}`;
 }
-
 actualizarEncabezado(hoyStr);
 
-
-// ================== Storage y datos ==================
+// ================== Storage y datos (keys) ==================
 const KEY_REGISTRO   = "registroTareas";
 const KEY_EDICIONES  = "ediciones";
 const KEY_TAREAS_DIA = "tareasSemanales";
@@ -40,6 +51,7 @@ const KEY_COLUMNAS   = "columnasDefUser";
 const KEY_REG_HORAS  = "registroHoras";
 const KEY_NOTAS      = "notasFijas";
 
+// Cargar datos desde localStorage (backwards-safe)
 let datosGuardados     = JSON.parse(localStorage.getItem(KEY_REGISTRO))   || {};
 let edicionesGuardadas = JSON.parse(localStorage.getItem(KEY_EDICIONES)) || {};
 let tareasPorDiaUser   = JSON.parse(localStorage.getItem(KEY_TAREAS_DIA)) || {};
@@ -62,7 +74,7 @@ function guardarTodo(){
 }
 
 // ================== Util ==================
-function limpiarContenedor(){ document.getElementById("contenedorTareas").innerHTML=""; }
+function limpiarContenedor(){ const el = document.getElementById("contenedorTareas"); if(el) el.innerHTML=""; }
 function reflowGridColumns(){ 
   const cont = document.getElementById("contenedorTareas"); 
   if(cont) cont.style.gridTemplateColumns=`repeat(${columnasDef.length},1fr)`; 
@@ -93,8 +105,16 @@ botonEditar.onclick = () => {
   document.querySelectorAll(".add-task-btn,.del-col-btn").forEach(b => b.style.display = modoEdicion ? "inline-block" : "none");
   document.querySelectorAll(".btn-eliminar-tarea,.btn-mover-tarea").forEach(b => b.style.display = modoEdicion ? "inline-block" : "none");
 
+  // Al terminar edición, ocultar inputs de fecha y resetear estados temporales
   if(!modoEdicion){
-    document.querySelectorAll('.caja input[type="date"]').forEach(input => input.classList.remove('visible'));
+    document.querySelectorAll('.caja input[type="date"]').forEach(input => {
+      input.classList.remove('visible');
+      input.value = "";
+    });
+    // resetear estado del botón "Ir a fecha"
+    irFechaClickState = false;
+    selectedFechaTemp = null;
+
     if(currentViewDate !== hoyStr){
       const volver = confirm("¿Volver al día actual?");
       if(volver){
@@ -106,6 +126,29 @@ botonEditar.onclick = () => {
   }
 };
 document.getElementById("botonEditarContainer")?.appendChild(botonEditar);
+
+// ================== Asegurar tareas recurrentes en una fecha ==================
+function ensureRecurrentTasksForDate(fechaISO) {
+  // Añade a datosGuardados[fechaISO] las tareas definidas en tareasPorDiaUser
+  if(!fechaISO) return;
+  const dia = obtenerDiaSemana(fechaISO);
+  const plantilla = tareasPorDiaUser[dia] || {};
+  if(!datosGuardados[fechaISO]) datosGuardados[fechaISO] = [];
+
+  // Por cada caja en la plantilla, agregar tareas que no existan ya en la fecha
+  Object.keys(plantilla).forEach(cajaId => {
+    const tareas = plantilla[cajaId] || [];
+    tareas.forEach(nombreTarea => {
+      const existe = datosGuardados[fechaISO].some(t => t.tarea === nombreTarea && t.caja === cajaId);
+      if(!existe){
+        const key = `auto-${Date.now()}-${Math.random().toString(36).substr(2,5)}`;
+        datosGuardados[fechaISO].push({ tarea: nombreTarea, completada: false, caja: cajaId, key });
+      }
+    });
+  });
+  // Guardamos (es idempotente: si no se añadió nada, no cambia)
+  guardarTodo();
+}
 
 // ================== Crear columna y tareas ==================
 function crearColumnaDOM(colDef, viewDate = currentViewDate){
@@ -128,6 +171,7 @@ function crearColumnaDOM(colDef, viewDate = currentViewDate){
   };
   div.appendChild(h2);
 
+  // Botón eliminar columna (edición)
   const delColBtn = document.createElement("button");
   delColBtn.textContent = "Eliminar caja";
   delColBtn.className = "del-col-btn";
@@ -142,6 +186,7 @@ function crearColumnaDOM(colDef, viewDate = currentViewDate){
   };
   div.appendChild(delColBtn);
 
+  // Lista de tareas para esta caja y fecha
   const lista = (datosGuardados[viewDate]||[]).filter(t => t.caja===id);
   lista.forEach((tareaObj) => {
     const contenedorTarea = document.createElement("div");
@@ -164,6 +209,7 @@ function crearColumnaDOM(colDef, viewDate = currentViewDate){
       }
     };
 
+    // Botón eliminar tarea (3 opciones)
     const btnEliminar = document.createElement("button");
     btnEliminar.textContent = "❌"; 
     btnEliminar.title = "Eliminar tarea";
@@ -177,6 +223,7 @@ function crearColumnaDOM(colDef, viewDate = currentViewDate){
       else if (opcion === "3") eliminarTarea(tareaObj, "todos", viewDate);
     };
 
+    // Botón mover tarea (muestra input fecha inline)
     const btnMover = document.createElement("button");
     btnMover.textContent = "➡️"; 
     btnMover.title = "Mover tarea a otra fecha";
@@ -187,6 +234,7 @@ function crearColumnaDOM(colDef, viewDate = currentViewDate){
     const inputFecha = document.createElement("input");
     inputFecha.type = "date"; 
     inputFecha.className = "fecha-input";
+    inputFecha.style.marginLeft = "5px";
     btnMover.onclick = () => { 
       inputFecha.classList.add("visible"); 
       inputFecha.focus(); 
@@ -195,7 +243,10 @@ function crearColumnaDOM(colDef, viewDate = currentViewDate){
       const fechaDestino = inputFecha.value;
       if(fechaDestino){
         if(!datosGuardados[fechaDestino]) datosGuardados[fechaDestino] = [];
-        datosGuardados[fechaDestino].push({...tareaObj});
+        const nueva = {...tareaObj};
+        nueva.key = `cal-${Date.now()}-${Math.random().toString(36).substr(2,5)}`;
+        datosGuardados[fechaDestino].push(nueva);
+        // eliminar tarea origen (por key)
         eliminarTarea(tareaObj, "hoy", viewDate);
         guardarTodo();
         renderAllColumns(currentViewDate);
@@ -217,6 +268,7 @@ function crearColumnaDOM(colDef, viewDate = currentViewDate){
     div.appendChild(contenedorTarea);
   });
 
+  // Soporte drag/drop
   div.addEventListener("dragover", e => e.preventDefault());
   div.addEventListener("drop", e => {
     e.preventDefault();
@@ -229,6 +281,7 @@ function crearColumnaDOM(colDef, viewDate = currentViewDate){
     actualizarGraficos();
   });
 
+  // Botón agregar tarea (actúa en viewDate)
   const addBtn = document.createElement("button");
   addBtn.textContent = "➕ Agregar tarea";
   addBtn.className = "add-task-btn";
@@ -267,14 +320,23 @@ function crearColumnaDOM(colDef, viewDate = currentViewDate){
 // ================== Render columnas ==================
 function renderAllColumns(viewDate = currentViewDate){
   currentViewDate = viewDate || currentViewDate;
+
+  // Asegurar que las tareas recurrentes estén presentes en la fecha (no duplica)
+  ensureRecurrentTasksForDate(currentViewDate);
+
+  // Actualizar encabezado
   actualizarEncabezado(currentViewDate);
 
   limpiarContenedor();
   reflowGridColumns();
+
+  // Crear columnas según columnasDef
   columnasDef.forEach(col=>{
     const cont = document.getElementById("contenedorTareas");
     if(cont) cont.appendChild(crearColumnaDOM(col, currentViewDate));
   });
+
+  // Mostrar/ocultar botones según modo edición
   document.querySelectorAll(".add-task-btn,.del-col-btn").forEach(b => b.style.display = modoEdicion ? "inline-block" : "none");
   document.querySelectorAll(".btn-eliminar-tarea,.btn-mover-tarea").forEach(b => b.style.display = modoEdicion ? "inline-block" : "none");
 
@@ -288,22 +350,36 @@ function renderAllColumns(viewDate = currentViewDate){
 
 // ================== Eliminar tarea ==================
 function eliminarTarea(tareaObj,modo, fecha = currentViewDate){
+  // Eliminar únicamente por key en la fecha indicada
   if((modo === "hoy" || modo === "todos") && datosGuardados[fecha]){
     datosGuardados[fecha] = (datosGuardados[fecha]||[]).filter(t=>t.key!==tareaObj.key);
     if(datosGuardados[fecha].length === 0) delete datosGuardados[fecha];
   }
 
+  // Eliminar en todas las semanas que coincidan con el weekday del 'fecha' (opción 2)
   if(modo === "todas"){
-    const dia = obtenerDiaSemana(fecha);
-    if(tareasPorDiaUser[dia] && tareasPorDiaUser[dia][tareaObj.caja]){
-      tareasPorDiaUser[dia][tareaObj.caja] = tareasPorDiaUser[dia][tareaObj.caja].filter(t=>t!==tareaObj.tarea);
+    const diaNombre = obtenerDiaSemana(fecha);
+    // 1) quitar del template semanal (tareasPorDiaUser)
+    if(tareasPorDiaUser[diaNombre] && tareasPorDiaUser[diaNombre][tareaObj.caja]){
+      tareasPorDiaUser[diaNombre][tareaObj.caja] = tareasPorDiaUser[diaNombre][tareaObj.caja].filter(t => t !== tareaObj.tarea);
+      if(tareasPorDiaUser[diaNombre][tareaObj.caja].length === 0) delete tareasPorDiaUser[diaNombre][tareaObj.caja];
     }
+    // 2) eliminar de datosGuardados todas las fechas cuyo weekday sea diaNombre
+    Object.keys(datosGuardados).forEach(f => {
+      if(obtenerDiaSemana(f) === diaNombre){
+        datosGuardados[f] = datosGuardados[f].filter(t => !(t.tarea === tareaObj.tarea && t.caja === tareaObj.caja));
+        if(datosGuardados[f].length === 0) delete datosGuardados[f];
+      }
+    });
   } else if(modo === "todos"){
+    // remover de tareasPorDiaUser en todos los días para esa caja
     Object.keys(tareasPorDiaUser).forEach(d => {
       if(tareasPorDiaUser[d] && tareasPorDiaUser[d][tareaObj.caja]){
         tareasPorDiaUser[d][tareaObj.caja] = tareasPorDiaUser[d][tareaObj.caja].filter(t=>t!==tareaObj.tarea);
+        if(tareasPorDiaUser[d][tareaObj.caja].length === 0) delete tareasPorDiaUser[d][tareaObj.caja];
       }
     });
+    // remover de datosGuardados en todas las fechas (tarea y caja)
     Object.keys(datosGuardados).forEach(f => {
       datosGuardados[f] = datosGuardados[f].filter(t => !(t.tarea === tareaObj.tarea && t.caja === tareaObj.caja));
       if(datosGuardados[f].length === 0) delete datosGuardados[f];
@@ -322,24 +398,29 @@ function actualizarHistorial() {
   if (!historialEl) return;
   historialEl.innerHTML = "";
 
-  const registros = JSON.parse(localStorage.getItem(KEY_REGISTRO) || "{}");
+  // Usar datosGuardados (ya sincronizado con localStorage a través de guardarTodo)
+  const registros = datosGuardados;
   let fechas = Object.keys(registros).sort((a,b)=>new Date(a)-new Date(b));
   let fechaInicio = fechas.length > 0 ? fechas[0] : hoyStr;
-  let fechaActual = new Date(hoyStr);
+  let fechaActual = dateFromISO(hoyStr);
 
   let f = new Date(fechaActual);
-  const inicio = new Date(fechaInicio);
+  const inicio = dateFromISO(fechaInicio);
 
+  // recorrer hacia atrás desde hoy hasta la primera fecha con registro
   while(f >= inicio){
-    const diaSemana = obtenerDiaSemana(f.toISOString().split("T")[0]);
+    const fechaISO = dateToISO(f);
+    const diaSemana = obtenerDiaSemana(fechaISO);
+
+    // Solo mostrar días laborales (Lunes-Viernes)
     if(diaSemana !== "Sábado" && diaSemana !== "Domingo"){
-      const fechaISO = f.toISOString().split("T")[0];
       const lista = registros[fechaISO] || [];
 
       let icono;
       if(lista.length === 0){
-        icono = "🏖️";
+        icono = "🏖️"; // ninguna tarea registrada
       } else {
+        // Contar tareas y completadas reales de esa fecha
         const completas = lista.filter(t => t.completada).length;
         if(completas === 0){
           icono = "❌";
@@ -364,17 +445,18 @@ function actualizarHistorial() {
   }
 }
 
-// ================== Tareas automáticas ==================
+// ================== Tareas automáticas para hoy (inicio) ==================
 function cargarTareasDiaActual(){
   const dia = obtenerDiaSemana(hoyStr);
   if(tareasPorDiaUser[dia]){
     Object.keys(tareasPorDiaUser[dia]).forEach(caja=>{
-      tareasPorDiaUser[dia][caja].forEach(tarea=>{
-        if(tarea.toLowerCase()!=="inactividad"){
+      const tareas = tareasPorDiaUser[dia][caja];
+      if(!datosGuardados[hoyStr]) datosGuardados[hoyStr]=[];
+      tareas.forEach(t=>{
+        // evitar duplicar: comprobamos por nombre y caja
+        if(!datosGuardados[hoyStr].some(e=>e.tarea===t && e.caja===caja)){
           const key = `auto-${Date.now()}-${Math.random().toString(36).substr(2,5)}`;
-          if(!datosGuardados[hoyStr]) datosGuardados[hoyStr] = [];
-          const existe = datosGuardados[hoyStr].some(t=>t.tarea===tarea && t.caja===caja);
-          if(!existe) datosGuardados[hoyStr].push({tarea, completada:false, caja, key});
+          datosGuardados[hoyStr].push({tarea:t,completada:false,caja:caja,key});
         }
       });
     });
@@ -397,46 +479,205 @@ function cargarNotas() {
   });
 }
 
+// ================== Bloque Gráficos Mejorado ==================
 let graficoCumplimiento, graficoHoras;
 
-// Función para actualizar los gráficos
+// Crear gráficos
+function crearGraficos() {
+  const ctxCumplimientoEl = document.getElementById('graficoCumplimiento');
+  const ctxHorasEl = document.getElementById('graficoHoras');
+  if (!ctxCumplimientoEl || !ctxHorasEl) return;
+
+  const ctxCumplimiento = ctxCumplimientoEl.getContext('2d');
+  const ctxHoras = ctxHorasEl.getContext('2d');
+
+  graficoCumplimiento = new Chart(ctxCumplimiento, {
+    type: document.getElementById('tipoGraficoCumplimiento')?.value || 'bar',
+    data: { labels: [], datasets: [{ label: 'Cumplimiento %', data: [], backgroundColor: '#1976d2' }] },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: true } },
+      scales: { y: { beginAtZero: true, max: 100 } }
+    }
+  });
+
+  graficoHoras = new Chart(ctxHoras, {
+    type: document.getElementById('tipoGraficoHoras')?.value || 'line',
+    data: { labels: [], datasets: [{ label: 'Horas registradas', data: [], borderColor: '#1976d2', fill: false }] },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: true } }
+    }
+  });
+
+  actualizarGraficos();
+}
+
+// ================== Funciones de Datos ==================
+function obtenerSemanas(fechaInicio, fechaFin) {
+  const semanas = [];
+  let inicio = new Date(fechaInicio);
+  inicio.setHours(0,0,0,0);
+
+  while (inicio <= fechaFin) {
+    let lunes = new Date(inicio);
+    while (lunes.getDay() !== 1) lunes.setDate(lunes.getDate() + 1);
+    let viernes = new Date(lunes);
+    viernes.setDate(viernes.getDate() + 4);
+    if (viernes > fechaFin) viernes = new Date(fechaFin);
+
+    semanas.push({ inicio: new Date(lunes), fin: new Date(viernes) });
+    inicio = new Date(viernes);
+    inicio.setDate(inicio.getDate() + 1);
+  }
+  return semanas;
+}
+
+function generarDatosReales(rango) {
+  const hoy = dateFromISO(getHoyStr());
+  let labels = [];
+  let datos = [];
+
+  const fechasOrdenadas = Object.keys(datosGuardados)
+    .sort((a,b) => new Date(a) - new Date(b));
+
+  if (rango === '7d') {
+    for (let i = 6; i >= 0; i--) {
+      const dia = new Date(hoy);
+      dia.setDate(hoy.getDate() - i);
+      const fechaISO = dateToISO(dia);
+      labels.push(fechaISO);
+      const tareas = datosGuardados[fechaISO] || [];
+      const total = tareas.length;
+      const completadas = tareas.filter(t => t.completada).length;
+      datos.push(total === 0 ? 0 : Math.round((completadas / total) * 100));
+    }
+  } else if (rango === 'mes') {
+    const primerDia = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+    const ultimoDia = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
+    const semanas = obtenerSemanas(primerDia, ultimoDia);
+    semanas.forEach(s => {
+      labels.push(`${dateToISO(s.inicio)} - ${dateToISO(s.fin)}`);
+      let tareasSemana = 0, completadasSemana = 0;
+      Object.keys(datosGuardados).forEach(f => {
+        const fecha = dateFromISO(f);
+        if(fecha >= s.inicio && fecha <= s.fin) {
+          const tareas = datosGuardados[f];
+          tareasSemana += tareas.length;
+          completadasSemana += tareas.filter(t => t.completada).length;
+        }
+      });
+      datos.push(tareasSemana === 0 ? 0 : Math.round((completadasSemana / tareasSemana) * 100));
+    });
+  } else if (rango === 'anio') {
+    for(let m=0; m<12; m++){
+      labels.push(`${m+1}/${hoy.getFullYear()}`);
+      let tareasMes = 0, completadasMes = 0;
+      Object.keys(datosGuardados).forEach(f => {
+        const fecha = dateFromISO(f);
+        if(fecha.getMonth() === m && fecha.getFullYear() === hoy.getFullYear()){
+          const tareas = datosGuardados[f];
+          tareasMes += tareas.length;
+          completadasMes += tareas.filter(t => t.completada).length;
+        }
+      });
+      datos.push(tareasMes === 0 ? 0 : Math.round((completadasMes / tareasMes) * 100));
+    }
+  }
+
+  if(labels.length === 0){ labels=['Sin datos']; datos=[0]; }
+  return { labels, datos };
+}
+
+function generarDatosHoras(rango) {
+  const hoy = dateFromISO(getHoyStr());
+  let labels = [];
+  let datos = [];
+
+  if(rango === '7d'){
+    for(let i=6;i>=0;i--){
+      const dia = new Date(hoy);
+      dia.setDate(hoy.getDate() - i);
+      const fechaISO = dateToISO(dia);
+      labels.push(fechaISO);
+      const horasDia = registroHoras.filter(r=>r.fecha===fechaISO).reduce((acc,r)=>acc+r.horas,0);
+      datos.push(horasDia);
+    }
+  } else if(rango==='mes'){
+    const primerDia = new Date(hoy.getFullYear(), hoy.getMonth(),1);
+    const ultimoDia = new Date(hoy.getFullYear(), hoy.getMonth()+1,0);
+    const semanas = obtenerSemanas(primerDia,ultimoDia);
+    semanas.forEach(s=>{
+      labels.push(`${dateToISO(s.inicio)} - ${dateToISO(s.fin)}`);
+      const horasSemana = registroHoras
+        .filter(r=>{const f=dateFromISO(r.fecha); return f>=s.inicio && f<=s.fin;})
+        .reduce((acc,r)=>acc+r.horas,0);
+      datos.push(horasSemana);
+    });
+  } else if(rango==='anio'){
+    for(let m=0;m<12;m++){
+      labels.push(`${m+1}/${hoy.getFullYear()}`);
+      const horasMes = registroHoras
+        .filter(r=>{const f=dateFromISO(r.fecha); return f.getMonth()===m && f.getFullYear()===hoy.getFullYear();})
+        .reduce((acc,r)=>acc+r.horas,0);
+      datos.push(horasMes);
+    }
+  }
+
+  if(labels.length===0){ labels=['Sin datos']; datos=[0]; }
+  return { labels, datos };
+}
+
+// ================== Actualizar gráficos ==================
 function actualizarGraficos() {
-  const ctxC = document.getElementById("graficoCumplimiento")?.getContext("2d");
-  const ctxH = document.getElementById("graficoHoras")?.getContext("2d");
-  if (!ctxC || !ctxH) return;
+  if (!graficoCumplimiento || !graficoHoras) return;
 
-  const rangoC = document.getElementById("rangoGraficoCumplimiento")?.value || "7d";
-  const rangoH = document.getElementById("rangoGraficoHoras")?.value || "7d";
+  const rangoC = document.getElementById('rangoGraficoCumplimiento')?.value || '7d';
+  const tipoC = document.getElementById('tipoGraficoCumplimiento')?.value || 'bar';
+  const rangoH = document.getElementById('rangoGraficoHoras')?.value || '7d';
+  const tipoH = document.getElementById('tipoGraficoHoras')?.value || 'line';
 
-  const tipoC = document.getElementById("tipoGraficoCumplimiento")?.value || "line";
-  const tipoH = document.getElementById("tipoGraficoHoras")?.value || "bar";
+  const dataC = generarDatosReales(rangoC);
+  graficoCumplimiento.data.labels = dataC.labels;
+  graficoCumplimiento.data.datasets[0].data = dataC.datos;
+  graficoCumplimiento.type = tipoC;
+  graficoCumplimiento.update();
 
-  const fechas = Object.keys(datosGuardados).sort();
-  
-  const cumplimientoData = fechas.map(f => {
-    const total = datosGuardados[f]?.length || 0;
-    const ok = datosGuardados[f]?.filter(t => t.completada).length || 0;
-    return total > 0 ? Math.round((ok / total) * 100) : 0;
-  });
+  const dataH = generarDatosHoras(rangoH);
+  graficoHoras.data.labels = dataH.labels;
+  graficoHoras.data.datasets[0].data = dataH.datos;
+  graficoHoras.type = tipoH;
+  graficoHoras.update();
+}
 
-  const horasData = fechas.map(f =>
-    registroHoras.filter(r => r.fecha === f).reduce((sum, r) => sum + r.horas, 0)
-  );
+// ================== Inicializar gráficos solo si el contenedor es visible ==================
+function mostrarGraficosSiEsVisible() {
+  const cont = document.getElementById('contenedorGraficos');
+  if (cont.classList.contains('show')) {
+    if (!graficoCumplimiento || !graficoHoras) {
+      crearGraficos();
+    } else {
+      graficoCumplimiento.resize();
+      graficoHoras.resize();
+    }
+  }
+}
 
-  if (graficoCumplimiento) graficoCumplimiento.destroy();
-  if (graficoHoras) graficoHoras.destroy();
+// ================== Modificar toggleElemento para graficos ==================
+function toggleElemento(tituloId, contenedorId) {
+  const titulo = document.getElementById(tituloId);
+  const cont = document.getElementById(contenedorId);
+  const visible = cont.classList.contains("show");
 
-  graficoCumplimiento = new Chart(ctxC, {
-    type: tipoC,
-    data: { labels: fechas, datasets: [{ label: "% Cumplimiento", data: cumplimientoData, fill: false, borderColor: "#1976d2", backgroundColor: "#1976d2", tension: 0.3 }] },
-    options: { responsive: true, plugins: { legend: { display: true } }, scales: { y: { beginAtZero: true, max: 100, ticks: { callback: val => val + "%" } } } }
-  });
+  cont.classList.toggle("show", !visible);
+  titulo.classList.toggle("abierto", !visible);
+  cont.setAttribute("aria-hidden", visible);
 
-  graficoHoras = new Chart(ctxH, {
-    type: tipoH,
-    data: { labels: fechas, datasets: [{ label: "Horas cierre tareas", data: horasData, backgroundColor: "#1976d2", borderColor: "#1976d2", fill: tipoH === "line" ? false : true }] },
-    options: { responsive: true, plugins: { legend: { display: true } }, scales: { y: { min: 8, max: 17, ticks: { stepSize: 1, callback: val => `${val}:00` } } } }
-  });
+  if (contenedorId === 'contenedorGraficos' && !visible) {
+    setTimeout(() => mostrarGraficosSiEsVisible(), 350);
+  }
 }
 
 // ================== Calendario ==================
@@ -451,15 +692,51 @@ function agregarBotonVolverHoy(){
     renderAllColumns(hoyStr);
     quitarBotonVolverHoy();
   };
-  document.getElementById("contenedorTareas").before(btn);
+  // Insertarlo antes del contenedor de tareas para mantener formato
+  const cont = document.getElementById("contenedorTareas");
+  if(cont && cont.parentNode) cont.parentNode.insertBefore(btn, cont);
 }
 function quitarBotonVolverHoy(){
   const b = document.getElementById("btnVolverHoy");
   if(b) b.remove();
 }
 
-// ================== Inicialización ==================
+// Estados para comportamiento del botón "Ir a fecha"
+let irFechaClickState = false;
+let selectedFechaTemp = null;
+
+// Función enlazada al botón "Ir a fecha" (primera pulsación muestra selector, segunda navega y sube)
+function irAFechaSeleccionada() {
+  const fechaInput = document.getElementById("fechaSeleccion");
+  if(!fechaInput) return;
+  if(!irFechaClickState){
+    // primera pulsación: mostrar selector
+    fechaInput.classList.add("visible");
+    fechaInput.focus();
+    selectedFechaTemp = fechaInput.value || null;
+    irFechaClickState = true;
+  } else {
+    // segunda pulsación: navegar
+    const fecha = fechaInput.value || selectedFechaTemp;
+    if(!fecha) return alert("Selecciona una fecha.");
+    currentViewDate = fecha;
+    renderAllColumns(fecha);
+    actualizarHistorial();
+    actualizarGraficos();
+    // Subir a las cajas (hacer scroll)
+    const cont = document.getElementById("contenedorTareas");
+    if(cont) cont.scrollIntoView({behavior:"smooth", block:"start"});
+    // limpiar estados y ocultar selector
+    fechaInput.classList.remove("visible");
+    fechaInput.value = "";
+    selectedFechaTemp = null;
+    irFechaClickState = false;
+  }
+}
+
+// ================== Inicialización y eventos DOM ==================
 document.addEventListener("DOMContentLoaded", () => {
+  // Cargar notas y tareas recurrentes para hoy primero
   cargarNotas();
   cargarTareasDiaActual();
   llenarSelectCaja();
@@ -474,21 +751,23 @@ document.addEventListener("DOMContentLoaded", () => {
   const inputNuevaTarea = document.getElementById("nuevaTareaCalendario");
   const selectCaja = document.getElementById("selectCaja");
   const contCalendario = document.getElementById("contenedorCalendario");
+  const btnSeleccionarFecha = document.getElementById("btnSeleccionarFecha");
+  const btnIrFecha = document.getElementById("btnIrFecha"); // por compatibilidad si existe
 
+  // Ocultar botones no usados en el calendario (si deseas mostrarlos, quita estas líneas)
   if(btnAddFija) btnAddFija.style.display = "none";
   if(btnAddTodosDias) btnAddTodosDias.style.display = "none";
 
+  // Al cambiar la fecha en el date input: guardar selección temporal solamente
   if(fechaInput){
     fechaInput.addEventListener("change", (e)=>{
       const fecha = e.target.value;
-      if(!fecha) return;
-      currentViewDate = fecha;
-      renderAllColumns(fecha);
-      actualizarHistorial();
-      actualizarGraficos();
+      selectedFechaTemp = fecha || null;
+      // no navegamos ni subimos: eso ocurre al presionar el botón "Ir a fecha" por segunda vez
     });
   }
 
+  // Botón "➕ Solo este día" (agregar tarea a la fecha seleccionada desde calendario)
   if(btnAddFecha){
     btnAddFecha.addEventListener("click", ()=>{
       const fecha = fechaInput?.value;
@@ -497,7 +776,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if(!fecha) return alert("Selecciona una fecha.");
       if(!tarea || !caja) return alert("Debes indicar caja y nombre de tarea.");
       if(!datosGuardados[fecha]) datosGuardados[fecha] = [];
-      const key = `cal-${Date.now()}`;
+      const key = `cal-${Date.now()}-${Math.random().toString(36).substr(2,5)}`;
       datosGuardados[fecha].push({tarea, completada:false, caja, key});
       guardarTodo();
       if(currentViewDate === fecha) renderAllColumns(fecha);
@@ -509,22 +788,17 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // Forzar apertura del selector de fecha al hacer click en el contenedor del calendario
   if(contCalendario && fechaInput){
     contCalendario.addEventListener("click", (e) => {
       if(e.target.tagName !== "INPUT" && e.target.tagName !== "BUTTON"){
         fechaInput.focus();
-        fechaInput.click();
+        try { fechaInput.click(); } catch(e){ /* no crítico */ }
       }
     });
   }
 
-  const btnSeleccionarFecha = document.getElementById('btnSeleccionarFecha');
-  if(btnSeleccionarFecha){
-    btnSeleccionarFecha.addEventListener('click', ()=>{
-      if(fechaInput){
-        fechaInput.classList.add('visible');
-        fechaInput.focus();
-      }
-    });
-  }
+  // Conectar botón del calendario (id puede ser btnSeleccionarFecha o btnIrFecha)
+  if(btnSeleccionarFecha) btnSeleccionarFecha.addEventListener("click", irAFechaSeleccionada);
+  if(btnIrFecha && !btnSeleccionarFecha) btnIrFecha.addEventListener("click", irAFechaSeleccionada);
 });
