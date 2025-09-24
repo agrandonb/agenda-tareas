@@ -112,10 +112,9 @@ button {
   cursor: pointer;
   transition: background 0.2s ease, transform 0.2s;
 }
-
-/* Hover de todos los botones */
 button:hover {
   transform: scale(1.03);
+  opacity: 0.9;
 }
 
 /* Botones globales de opciones */
@@ -126,9 +125,9 @@ button:hover {
   background-color: #2980b9;
 }
 
-/* ================== Botones de las cajas de tareas ================== */
+/* ================== Botones de tareas por caja ================== */
 .caja button {
-  color: #444; /* letras ligeramente más oscuras para visibilidad */
+  color: #444; /* letras más oscuras */
   border: none;
   border-radius: 6px;
   padding: 6px 12px;
@@ -141,7 +140,6 @@ button:hover {
   transform: scale(1.03);
   opacity: 0.9;
 }
-
 /* Colores por caja */
 .contenedor .caja:nth-child(1) button,
 .contenedor .caja:nth-child(2) button {
@@ -160,10 +158,16 @@ button:hover {
   background-color: var(--amarillo-pastel);
   color: #aa8800;
 }
-/* Resto de cajas mantiene azul original */
+/* Resto de cajas mantiene azul */
 .contenedor .caja:nth-child(n+6) button {
   background-color: var(--color-secundario);
   color: #fff;
+}
+
+/* ================== Botón completado ================== */
+.caja button.ok {
+  background-color: var(--color-verde);
+  color: var(--color-verde-texto);
 }
 
 /* ================== Títulos plegables ================== */
@@ -236,20 +240,6 @@ input, select {
   font-family: inherit;
 }
 
-/* ================== Calendario filas alineadas ================== */
-.fila-calendario {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 10px;
-}
-
-/* ================== Colores pastel ================== */
-.rojo-pastel { background-color: var(--rojo-pastel); }
-.naranjo-pastel { background-color: var(--naranjo-pastel); }
-.amarillo-pastel { background-color: var(--amarillo-pastel); }
-
 /* ================== Contenedores plegables ================== */
 #historial, #contenedorCalendario, #contenedorGraficos, #panelConfigGraficos {
   max-height: 0;
@@ -272,7 +262,6 @@ input, select {
 @media (max-width: 900px) {
   .contenedor { grid-template-columns: 1fr; }
   canvas { min-height: 200px; aspect-ratio: 1.5 / 1; }
-  .fila-calendario { flex-direction: column; gap: 6px; }
 }
 @media (max-width: 600px) {
   .caja-notas textarea { min-height: 180px; }
