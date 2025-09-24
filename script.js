@@ -432,8 +432,7 @@ function actualizarHistorial() {
   if (!historialEl) return;
   historialEl.innerHTML = "";
 
-  // Usar datosGuardados (ya sincronizado con localStorage a través de guardarTodo)
-  const registros = datosGuardados;
+  const registros = datosGuardados; // ya sincronizado con localStorage
   let fechas = Object.keys(registros).sort((a,b)=>new Date(a)-new Date(b));
   let fechaInicio = fechas.length > 0 ? fechas[0] : hoyStr;
   let fechaActual = dateFromISO(hoyStr);
@@ -441,7 +440,6 @@ function actualizarHistorial() {
   let f = new Date(fechaActual);
   const inicio = dateFromISO(fechaInicio);
 
-  // recorrer hacia atrás desde hoy hasta la primera fecha con registro
   while(f >= inicio){
     const fechaISO = dateToISO(f);
     const diaSemana = obtenerDiaSemana(fechaISO);
@@ -450,18 +448,17 @@ function actualizarHistorial() {
     if(diaSemana !== "Sábado" && diaSemana !== "Domingo"){
       const lista = registros[fechaISO] || [];
 
-      let icono;
+      let claseIcono;
       if(lista.length === 0){
-        icono = "🏖️"; // ninguna tarea registrada
+        claseIcono = "fuera"; // ninguna tarea registrada
       } else {
-        // Contar tareas y completadas reales de esa fecha
         const completas = lista.filter(t => t.completada).length;
         if(completas === 0){
-          icono = "❌";
+          claseIcono = "incompleto";
         } else if(completas === lista.length){
-          icono = "✅";
+          claseIcono = "ok";
         } else {
-          icono = "❌";
+          claseIcono = "incompleto";
         }
       }
 
@@ -472,7 +469,7 @@ function actualizarHistorial() {
 
       const divDia = document.createElement("div");
       divDia.className = "historial-dia";
-      divDia.innerHTML = `<strong>${fechaFormateada}</strong> <span>${icono}</span>`;
+      divDia.innerHTML = `<strong>${fechaFormateada}</strong> <span class="historial-tarea ${claseIcono}"></span>`;
       historialEl.appendChild(divDia);
     }
     f.setDate(f.getDate()-1);
@@ -836,3 +833,4 @@ document.addEventListener("DOMContentLoaded", () => {
   if(btnSeleccionarFecha) btnSeleccionarFecha.addEventListener("click", irAFechaSeleccionada);
   if(btnIrFecha && !btnSeleccionarFecha) btnIrFecha.addEventListener("click", irAFechaSeleccionada);
 });
+
