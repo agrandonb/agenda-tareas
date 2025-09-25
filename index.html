@@ -10,8 +10,10 @@
 <body>
 
 <header class="dashboard-header">
+  <div class="header-left">
+    <div class="dia-semana" id="diaSemana" aria-live="polite"></div>
+  </div>
   <h1>Registro de Tareas Diario</h1>
-  <div class="dia-semana" id="diaSemana" aria-live="polite"></div>
   <div class="header-right" id="botonEditarContainer"></div>
 </header>
 
@@ -64,23 +66,25 @@
     <label for="rangoGraficoCumplimiento">Rango gráfico Cumplimiento:</label>
     <select id="rangoGraficoCumplimiento" onchange="actualizarGraficos()">
       <option value="7d">Últimos 7 días</option>
-      <option value="mes" selected>Mes actual</option>
+      <option value="mes">Mes actual</option>
       <option value="anio">Año actual</option>
+      <option value="todo">Todo</option>
     </select>
     <label for="tipoGraficoCumplimiento" style="margin-left:10px;">Tipo gráfico Cumplimiento:</label>
     <select id="tipoGraficoCumplimiento" onchange="actualizarGraficos()">
       <option value="line">Lineal</option>
-      <option value="bar" selected>Barras</option>
+      <option value="bar">Barras</option>
     </select>
     <label for="rangoGraficoHoras" style="margin-left:10px;">Rango gráfico Horas:</label>
     <select id="rangoGraficoHoras" onchange="actualizarGraficos()">
       <option value="7d">Últimos 7 días</option>
-      <option value="mes" selected>Mes actual</option>
+      <option value="mes">Mes actual</option>
       <option value="anio">Año actual</option>
+      <option value="todo">Todo</option>
     </select>
     <label for="tipoGraficoHoras" style="margin-left:10px;">Tipo gráfico Horas:</label>
     <select id="tipoGraficoHoras" onchange="actualizarGraficos()">
-      <option value="bar" selected>Barras</option>
+      <option value="bar">Barras</option>
       <option value="line">Lineal</option>
     </select>
   </div>
