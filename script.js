@@ -544,7 +544,7 @@ function crearGraficos() {
       responsive: true,
       maintainAspectRatio: false,
       plugins: { legend: { display: true } },
-      scales: { y: { beginAtZero: true, max: 100 } }
+      scales: { y: { beginAtZero: true, max: 100, title: { display: true, text: "%" } } }
     }
   });
 
@@ -554,7 +554,14 @@ function crearGraficos() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { display: true } }
+      plugins: { legend: { display: true } },
+      scales: {
+        y: {
+          min: 8,
+          max: 17,
+          title: { display: true, text: "Horas" }
+        }
+      }
     }
   });
 
@@ -569,23 +576,23 @@ function obtenerSemanas(fechaInicio, fechaFin) {
   while (inicio <= fechaFin) {
     let lunes = new Date(inicio);
     while (lunes.getDay() !== 1) lunes.setDate(lunes.getDate() + 1);
-    let viernes = new Date(lunes);
-    viernes.setDate(viernes.getDate() + 4);
-    if (viernes > fechaFin) viernes = new Date(fechaFin);
+    let domingo = new Date(lunes);
+    domingo.setDate(domingo.getDate() + 6);
+    if (domingo > fechaFin) domingo = new Date(fechaFin);
 
-    semanas.push({ inicio: new Date(lunes), fin: new Date(viernes) });
-    inicio = new Date(viernes);
+    semanas.push({ inicio: new Date(lunes), fin: new Date(domingo) });
+    inicio = new Date(domingo);
     inicio.setDate(inicio.getDate() + 1);
   }
   return semanas;
 }
 
-function generarDatosReales(rango) {
+function generarDatosCumplimiento(rango) {
   const hoy = dateFromISO(getHoyStr());
   let labels = [];
   let datos = [];
 
-  if (rango === '7d') {
+  if (rango === 'dia') { // última semana diaria
     for (let i = 6; i >= 0; i--) {
       const dia = new Date(hoy);
       dia.setDate(hoy.getDate() - i);
@@ -596,7 +603,7 @@ function generarDatosReales(rango) {
       const completadas = tareas.filter(t => t.completada).length;
       datos.push(total === 0 ? 0 : Math.round((completadas / total) * 100));
     }
-  } else if (rango === 'mes') {
+  } else if (rango === 'semana') { // último mes agrupado por semana
     const primerDia = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
     const ultimoDia = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
     const semanas = obtenerSemanas(primerDia, ultimoDia);
@@ -613,7 +620,7 @@ function generarDatosReales(rango) {
       });
       datos.push(tareasSemana === 0 ? 0 : Math.round((completadasSemana / tareasSemana) * 100));
     });
-  } else if (rango === 'anio') {
+  } else if (rango === 'mes') { // último año agrupado por mes
     for(let m=0; m<12; m++){
       labels.push(`${m+1}/${hoy.getFullYear()}`);
       let tareasMes = 0, completadasMes = 0;
@@ -638,7 +645,7 @@ function generarDatosHoras(rango) {
   let labels = [];
   let datos = [];
 
-  if(rango === '7d'){
+  if(rango === 'dia'){ // última semana diaria
     for(let i=6;i>=0;i--){
       const dia = new Date(hoy);
       dia.setDate(hoy.getDate() - i);
@@ -647,7 +654,7 @@ function generarDatosHoras(rango) {
       const horasDia = registroHoras.filter(r=>r.fecha===fechaISO).reduce((acc,r)=>acc+r.horas,0);
       datos.push(horasDia);
     }
-  } else if(rango==='mes'){
+  } else if(rango==='semana'){ // último mes agrupado por semana
     const primerDia = new Date(hoy.getFullYear(), hoy.getMonth(),1);
     const ultimoDia = new Date(hoy.getFullYear(), hoy.getMonth()+1,0);
     const semanas = obtenerSemanas(primerDia,ultimoDia);
@@ -658,7 +665,7 @@ function generarDatosHoras(rango) {
         .reduce((acc,r)=>acc+r.horas,0);
       datos.push(horasSemana);
     });
-  } else if(rango==='anio'){
+  } else if(rango==='mes'){ // último año agrupado por mes
     for(let m=0;m<12;m++){
       labels.push(`${m+1}/${hoy.getFullYear()}`);
       const horasMes = registroHoras
@@ -676,12 +683,12 @@ function generarDatosHoras(rango) {
 function actualizarGraficos() {
   if (!graficoCumplimiento || !graficoHoras) return;
 
-  const rangoC = document.getElementById('rangoGraficoCumplimiento')?.value || '7d';
+  const rangoC = document.getElementById('rangoGraficoCumplimiento')?.value || 'semana';
   const tipoC = document.getElementById('tipoGraficoCumplimiento')?.value || 'bar';
-  const rangoH = document.getElementById('rangoGraficoHoras')?.value || '7d';
+  const rangoH = document.getElementById('rangoGraficoHoras')?.value || 'semana';
   const tipoH = document.getElementById('tipoGraficoHoras')?.value || 'line';
 
-  const dataC = generarDatosReales(rangoC);
+  const dataC = generarDatosCumplimiento(rangoC);
   graficoCumplimiento.data.labels = dataC.labels;
   graficoCumplimiento.data.datasets[0].data = dataC.datos;
   graficoCumplimiento.type = tipoC;
