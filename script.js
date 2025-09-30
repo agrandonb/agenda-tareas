@@ -363,7 +363,9 @@ function crearColumnaDOM(colDef, viewDate = currentViewDate){
 function renderAllColumns(viewDate = currentViewDate){
   currentViewDate = viewDate || currentViewDate;
 
+  // Asegurar tareas recurrentes solo si no están omitidas hoy
   ensureRecurrentTasksForDate(currentViewDate);
+
   actualizarEncabezado(currentViewDate);
 
   limpiarContenedor();
@@ -374,6 +376,15 @@ function renderAllColumns(viewDate = currentViewDate){
     const columnaDOM = crearColumnaDOM(col, currentViewDate);
     // asegurar dataset.index correcto (por si columnasDef fue modificada)
     columnaDOM.dataset.index = idx;
+
+    // Filtrar tareas omitidas antes de agregar
+    const tareas = Array.from(columnaDOM.querySelectorAll(".tarea-item"));
+    tareas.forEach(tareaEl => {
+      const key = tareaEl.dataset.key;
+      const t = datosGuardados[currentViewDate]?.find(dt => dt.key === key);
+      if(!t) tareaEl.remove(); // remover si fue omitida
+    });
+
     if(cont) cont.appendChild(columnaDOM);
   });
 
