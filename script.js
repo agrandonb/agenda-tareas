@@ -389,34 +389,43 @@ function renderAllColumns(viewDate = currentViewDate){
 }
 
 // ================== Eliminar tarea ==================
-function eliminarTarea(tareaObj,modo, fecha = currentViewDate){
-  if((modo === "hoy" || modo === "todos") && datosGuardados[fecha]){
-    datosGuardados[fecha] = (datosGuardados[fecha]||[]).filter(t=>t.key!==tareaObj.key);
-    if(datosGuardados[fecha].length === 0) delete datosGuardados[fecha];
+function eliminarTarea(tareaObj, modo, fecha = currentViewDate) {
+  // Inicializar omitidas si no existe
+  if (!window.tareasOmitidas) window.tareasOmitidas = {};
+  if (!window.tareasOmitidas[fecha]) window.tareasOmitidas[fecha] = [];
+
+  if (modo === "hoy") {
+    // Marcar como omitida para que no se regenere hoy
+    window.tareasOmitidas[fecha].push({ tarea: tareaObj.tarea, caja: tareaObj.caja });
+
+    if (datosGuardados[fecha]) {
+      datosGuardados[fecha] = datosGuardados[fecha].filter(t => t.key !== tareaObj.key);
+      if (datosGuardados[fecha].length === 0) delete datosGuardados[fecha];
+    }
   }
 
-  if(modo === "todas"){
+  if (modo === "todas") {
     const diaNombre = obtenerDiaSemana(fecha);
-    if(tareasPorDiaUser[diaNombre] && tareasPorDiaUser[diaNombre][tareaObj.caja]){
+    if (tareasPorDiaUser[diaNombre] && tareasPorDiaUser[diaNombre][tareaObj.caja]) {
       tareasPorDiaUser[diaNombre][tareaObj.caja] = tareasPorDiaUser[diaNombre][tareaObj.caja].filter(t => t !== tareaObj.tarea);
-      if(tareasPorDiaUser[diaNombre][tareaObj.caja].length === 0) delete tareasPorDiaUser[diaNombre][tareaObj.caja];
+      if (tareasPorDiaUser[diaNombre][tareaObj.caja].length === 0) delete tareasPorDiaUser[diaNombre][tareaObj.caja];
     }
     Object.keys(datosGuardados).forEach(f => {
-      if(obtenerDiaSemana(f) === diaNombre){
+      if (obtenerDiaSemana(f) === diaNombre) {
         datosGuardados[f] = datosGuardados[f].filter(t => !(t.tarea === tareaObj.tarea && t.caja === tareaObj.caja));
-        if(datosGuardados[f].length === 0) delete datosGuardados[f];
+        if (datosGuardados[f].length === 0) delete datosGuardados[f];
       }
     });
-  } else if(modo === "todos"){
+  } else if (modo === "todos") {
     Object.keys(tareasPorDiaUser).forEach(d => {
-      if(tareasPorDiaUser[d] && tareasPorDiaUser[d][tareaObj.caja]){
-        tareasPorDiaUser[d][tareaObj.caja] = tareasPorDiaUser[d][tareaObj.caja].filter(t=>t!==tareaObj.tarea);
-        if(tareasPorDiaUser[d][tareaObj.caja].length === 0) delete tareasPorDiaUser[d][tareaObj.caja];
+      if (tareasPorDiaUser[d] && tareasPorDiaUser[d][tareaObj.caja]) {
+        tareasPorDiaUser[d][tareaObj.caja] = tareasPorDiaUser[d][tareaObj.caja].filter(t => t !== tareaObj.tarea);
+        if (tareasPorDiaUser[d][tareaObj.caja].length === 0) delete tareasPorDiaUser[d][tareaObj.caja];
       }
     });
     Object.keys(datosGuardados).forEach(f => {
       datosGuardados[f] = datosGuardados[f].filter(t => !(t.tarea === tareaObj.tarea && t.caja === tareaObj.caja));
-      if(datosGuardados[f].length === 0) delete datosGuardados[f];
+      if (datosGuardados[f].length === 0) delete datosGuardados[f];
     });
   }
 
@@ -424,6 +433,31 @@ function eliminarTarea(tareaObj,modo, fecha = currentViewDate){
   renderAllColumns(currentViewDate);
   actualizarHistorial();
   actualizarGraficos();
+}
+
+// ================== Asegurar tareas recurrentes ==================
+function ensureRecurrentTasksForDate(fechaISO) {
+  if (!fechaISO) return;
+  const dia = obtenerDiaSemana(fechaISO);
+  const plantilla = tareasPorDiaUser[dia] || {};
+  if (!datosGuardados[fechaISO]) datosGuardados[fechaISO] = [];
+
+  Object.keys(plantilla).forEach(cajaId => {
+    const tareas = plantilla[cajaId] || [];
+    tareas.forEach(nombreTarea => {
+      // Revisar si está omitida hoy
+      const omitida = window.tareasOmitidas?.[fechaISO]?.some(o => o.tarea === nombreTarea && o.caja === cajaId);
+      if (omitida) return;
+
+      const existe = datosGuardados[fechaISO].some(t => t.tarea === nombreTarea && t.caja === cajaId);
+      if (!existe) {
+        const key = `auto-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+        datosGuardados[fechaISO].push({ tarea: nombreTarea, completada: false, caja: cajaId, key });
+      }
+    });
+  });
+
+  guardarTodo();
 }
 
 // ================== Historial ==================
