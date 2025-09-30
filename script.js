@@ -144,13 +144,38 @@ function ensureRecurrentTasksForDate(fechaISO) {
   guardarTodo();
 }
 
+// ================== Mover tarea seguro ==================
+function moverTareaSeguro(tareaObj, viewDateOrigen, viewDateDestino, idDestino, indexDestino = null){
+  // Eliminar tarea de la lista original
+  if(datosGuardados[viewDateOrigen]){
+    datosGuardados[viewDateOrigen] = datosGuardados[viewDateOrigen].filter(t => t.key !== tareaObj.key);
+  }
+
+  // Crear la lista destino si no existe
+  if(!datosGuardados[viewDateDestino]) datosGuardados[viewDateDestino] = [];
+
+  // Actualizar la caja de la tarea
+  tareaObj.caja = idDestino;
+
+  // Insertar en posición específica si se pasa indexDestino, sino al final
+  if(indexDestino !== null && indexDestino >= 0 && indexDestino <= datosGuardados[viewDateDestino].length){
+    datosGuardados[viewDateDestino].splice(indexDestino, 0, tareaObj);
+  } else {
+    datosGuardados[viewDateDestino].push(tareaObj);
+  }
+
+  guardarTodo();
+  renderAllColumns(currentViewDate);
+  actualizarHistorial();
+  actualizarGraficos();
+}
+
 // ================== Crear columna y tareas ==================
 function crearColumnaDOM(colDef, viewDate = currentViewDate){
   const {id,titulo,clase} = colDef;
   const div = document.createElement("div");
   div.className = "caja";
   div.dataset.colId = id;
-  // guardar índice de la caja en dataset para referencia fácil
   const idx = columnasDef.findIndex(c => c.id === id);
   div.dataset.index = idx;
   div.id = `caja-${id}`;
@@ -196,35 +221,18 @@ function crearColumnaDOM(colDef, viewDate = currentViewDate){
     boton.className = `task-button ${clase} ${tareaObj.completada ? "completed" : ""} ${tareaObj.fueraOficina ? "fuera-oficina" : ""}`;
     boton.style.flex = "1";
 
-    // Obtener índice de caja desde el div actual (seguro)
     const cajaIndex = Number(div.dataset.index);
 
-    // Aplicar estilo inicial según estado
     if(tareaObj.completada){
       boton.style.backgroundColor = "var(--color-verde)";
       boton.style.color = "var(--color-verde-texto)";
     } else {
       switch(cajaIndex){
-        case 0:
-        case 1:
-          boton.style.backgroundColor = "var(--gris-claro)";
-          boton.style.color = "#333";
-          break;
-        case 2:
-          boton.style.backgroundColor = "var(--rojo-pastel)";
-          boton.style.color = "#a33";
-          break;
-        case 3:
-          boton.style.backgroundColor = "var(--naranjo-pastel)";
-          boton.style.color = "#b55a2a";
-          break;
-        case 4:
-          boton.style.backgroundColor = "var(--amarillo-pastel)";
-          boton.style.color = "#aa8800";
-          break;
-        default:
-          boton.style.backgroundColor = "var(--color-secundario)";
-          boton.style.color = "#fff";
+        case 0: case 1: boton.style.backgroundColor="var(--gris-claro)"; boton.style.color="#333"; break;
+        case 2: boton.style.backgroundColor="var(--rojo-pastel)"; boton.style.color="#a33"; break;
+        case 3: boton.style.backgroundColor="var(--naranjo-pastel)"; boton.style.color="#b55a2a"; break;
+        case 4: boton.style.backgroundColor="var(--amarillo-pastel)"; boton.style.color="#aa8800"; break;
+        default: boton.style.backgroundColor="var(--color-secundario)"; boton.style.color="#fff";
       }
     }
 
@@ -232,42 +240,23 @@ function crearColumnaDOM(colDef, viewDate = currentViewDate){
       if(!modoEdicion){ 
         boton.classList.toggle("completed"); 
         tareaObj.completada = boton.classList.contains("completed"); 
-
         if(tareaObj.completada){
           boton.style.backgroundColor = "var(--color-verde)";
           boton.style.color = "var(--color-verde-texto)";
         } else {
           switch(cajaIndex){
-            case 0:
-            case 1:
-              boton.style.backgroundColor = "var(--gris-claro)";
-              boton.style.color = "#333";
-              break;
-            case 2:
-              boton.style.backgroundColor = "var(--rojo-pastel)";
-              boton.style.color = "#a33";
-              break;
-            case 3:
-              boton.style.backgroundColor = "var(--naranjo-pastel)";
-              boton.style.color = "#b55a2a";
-              break;
-            case 4:
-              boton.style.backgroundColor = "var(--amarillo-pastel)";
-              boton.style.color = "#aa8800";
-              break;
-            default:
-              boton.style.backgroundColor = "var(--color-secundario)";
-              boton.style.color = "#fff";
+            case 0: case 1: boton.style.backgroundColor="var(--gris-claro)"; boton.style.color="#333"; break;
+            case 2: boton.style.backgroundColor="var(--rojo-pastel)"; boton.style.color="#a33"; break;
+            case 3: boton.style.backgroundColor="var(--naranjo-pastel)"; boton.style.color="#b55a2a"; break;
+            case 4: boton.style.backgroundColor="var(--amarillo-pastel)"; boton.style.color="#aa8800"; break;
+            default: boton.style.backgroundColor="var(--color-secundario)"; boton.style.color="#fff";
           }
         }
-
-        guardarTodo(); 
-        actualizarHistorial(); 
-        actualizarGraficos(); 
+        guardarTodo(); actualizarHistorial(); actualizarGraficos(); 
       }
     };
 
-    // Botón eliminar tarea (3 opciones)
+    // Botón eliminar
     const btnEliminar = document.createElement("button");
     btnEliminar.textContent = "❌"; 
     btnEliminar.title = "Eliminar tarea";
@@ -281,7 +270,7 @@ function crearColumnaDOM(colDef, viewDate = currentViewDate){
       else if (opcion === "3") eliminarTarea(tareaObj, "todos", viewDate);
     };
 
-    // Botón mover tarea (muestra input fecha inline)
+    // Botón mover tarea
     const btnMover = document.createElement("button");
     btnMover.textContent = "➡️"; 
     btnMover.title = "Mover tarea a otra fecha";
@@ -293,27 +282,17 @@ function crearColumnaDOM(colDef, viewDate = currentViewDate){
     inputFecha.type = "date"; 
     inputFecha.className = "fecha-input";
     inputFecha.style.marginLeft = "5px";
-    btnMover.onclick = () => { 
-      inputFecha.classList.add("visible"); 
-      inputFecha.focus(); 
-    };
+    btnMover.onclick = () => { inputFecha.classList.add("visible"); inputFecha.focus(); };
     inputFecha.addEventListener("change", () => {
       const fechaDestino = inputFecha.value;
       if(fechaDestino){
-        if(!datosGuardados[fechaDestino]) datosGuardados[fechaDestino] = [];
-        const nueva = {...tareaObj};
-        nueva.key = `cal-${Date.now()}-${Math.random().toString(36).substr(2,5)}`;
-        datosGuardados[fechaDestino].push(nueva);
-        eliminarTarea(tareaObj, "hoy", viewDate);
-        guardarTodo();
-        renderAllColumns(currentViewDate);
-        actualizarHistorial();
-        actualizarGraficos();
+        moverTareaSeguro(tareaObj, viewDate, fechaDestino, id);
         inputFecha.classList.remove("visible");
         inputFecha.value = "";
       }
     });
 
+    // Drag & drop
     boton.draggable = true;
     boton.dataset.key = tareaObj.key;
     boton.addEventListener("dragstart", (e) => { e.dataTransfer.setData("text/plain", tareaObj.key); });
@@ -325,20 +304,26 @@ function crearColumnaDOM(colDef, viewDate = currentViewDate){
     div.appendChild(contenedorTarea);
   });
 
-  // Soporte drag/drop
+  // Soporte drag/drop y reordenamiento
   div.addEventListener("dragover", e => e.preventDefault());
   div.addEventListener("drop", e => {
     e.preventDefault();
     const key = e.dataTransfer.getData("text/plain");
     const tarea = (datosGuardados[viewDate]||[]).find(t => t.key===key);
     if(!tarea) return;
-    tarea.caja = id;
-    guardarTodo();
-    renderAllColumns(currentViewDate);
-    actualizarGraficos();
+
+    const hijos = Array.from(div.querySelectorAll(".caja > div"));
+    let indexDestino = hijos.length;
+    const rect = div.getBoundingClientRect();
+    const offsetY = e.clientY - rect.top;
+    for(let i=0;i<hijos.length;i++){
+      const hRect = hijos[i].getBoundingClientRect();
+      if(offsetY < hRect.top + hRect.height/2){ indexDestino = i; break; }
+    }
+    moverTareaSeguro(tarea, viewDate, viewDate, id, indexDestino);
   });
 
-  // Botón agregar tarea (actúa en viewDate)
+  // Botón agregar tarea
   const addBtn = document.createElement("button");
   addBtn.textContent = "➕ Agregar tarea";
   addBtn.className = "add-task-btn";
